@@ -1,0 +1,9 @@
+Read AGENTS.md at the repository root first. It is the binding instruction for all AI agents and points to the frontend standard in frontend-standards/.
+
+Before writing code: frontend-standards/01-GOLDEN-RULES.md, then the signal scan in frontend-standards/RULE-MAP.md section 1 (read each triggered rule from its file), then the file for the task from RULE-MAP.md section 2.
+
+Stack is fixed: React 19, Vite 8, TypeScript 6 strict, React Router 7, TanStack Query 5, Redux Toolkit 2 (narrow), Tailwind 4, react-hook-form + zod, i18next, MapLibre GL 5, Vitest, MSW, Playwright, nginx 1.30 non-root. Dependencies only from frontend-standards/02-TECH-VERSIONS.md; otherwise ask.
+
+Before finishing: bash frontend-standards/tools/check-standards.sh . and node frontend-standards/tools/check-i18n.mjs src/shared/i18n/locales must exit 0; then walk frontend-standards/15-NEW-FEATURE-CHECKLIST.md and state skipped items.
+
+Never: secrets in VITE_* or config.js; API data baked into the build for SEO; datasets as maplibregl.Marker; literal user-visible strings; empty catch blocks; git commands that change state.

@@ -1,0 +1,6 @@
+Bu projenin AI talimatları AGENTS.md dosyasındadır. Onu oku ve harfiyen uygula.
+
+backend-standartlari/ altındaki standart bağlayıcıdır. Go 1.25.12 + Gin v1.12 + pgx/v5.
+Kod yazmadan önce 01-ALTIN-KURALLAR.md ve KURAL-HARITASI.md §1 sinyal taraması.
+Bitirmeden önce arac/standart-kontrol.sh (exit 0) ve 15-YENI-SERVIS-CHECKLIST.md.
+Git'te yalnızca salt-okunur komutlar.

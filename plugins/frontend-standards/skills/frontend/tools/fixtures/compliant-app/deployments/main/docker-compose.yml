@@ -1,0 +1,22 @@
+services:
+  web:
+    build:
+      context: ../../
+      dockerfile: deployments/main/Dockerfile
+      args:
+        - BUILD_ID=${BUILD_ID}
+    image: app:${BUILD_ID}
+    restart: unless-stopped
+    environment:
+      - APP_API_BASE_URL=${APP_API_BASE_URL}
+      - NGINX_UPSTREAM_API=${NGINX_UPSTREAM_API}
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/healthz || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 3

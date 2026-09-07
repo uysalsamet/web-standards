@@ -1,0 +1,97 @@
+# =============================================================================
+#  .golangci.yml — backend-standartlari
+#  Servis kökünde `.golangci.yml` olarak kopyalanır.
+#
+#  Bu dosya, standardın Go diline özgü kurallarını LINTER'A devreder.
+#  Dil dışı kurallar (SQL, Dockerfile, compose, route yetkisi) için:
+#     ./arac/standart-kontrol.sh
+# =============================================================================
+version: "2"
+
+linters:
+  enable:
+    # --- doğruluk ---
+    - errcheck        # [GEN-19] dönen hatayı yok sayma
+    - govet
+    - staticcheck
+    - ineffassign
+    - unused
+    - errorlint       # [API-22] errors.Is/As yerine == karşılaştırması
+    - bodyclose       # HTTP response body kapatılmıyor -> bağlantı sızıntısı
+    - rowserrcheck    # [PERF-16] rows.Err() kontrol edilmiyor -> sessiz eksik veri
+    - sqlclosecheck   # [PERF-16] rows/stmt kapatılmıyor -> havuz tükenmesi
+    - noctx           # [GEN-17] context'siz HTTP isteği
+    - contextcheck    # [GEN-17] context taşınmıyor
+    # --- güvenlik ---
+    - gosec           # [SEC-*] yaygın güvenlik hataları
+    # --- standarda özgü ---
+    - forbidigo       # aşağıdaki desenler
+    - depguard        # yasaklı bağımlılıklar [VER-05]
+    - misspell
+
+  settings:
+    forbidigo:
+      # analyze-types: string ve seçici ifadelerde de eşleşsin
+      analyze-types: true
+      forbid:
+        - pattern: '^fmt\.Print(ln|f)?$'
+          msg: '[OBS-01] Yapısal log kullan: log/slog. fmt.Print* yasak.'
+        - pattern: '^log\.(Print|Printf|Println|Fatal|Fatalf|Panic)$'
+          msg: '[OBS-01] Standart log paketi yerine log/slog kullan.'
+        - pattern: '^gin\.Default$'
+          msg: '[YAP-13] gin.New() kullan — Default kendi logger''ını ekler, çift log üretir.'
+        - pattern: '\.BindJSON$|\.MustBindWith$'
+          msg: '[API-12] ShouldBindJSON kullan — Bind* kendi 400''ünü yazar, hata gövdemizi ezer.'
+        - pattern: '^strings\.(ToLower|ToUpper|EqualFold)$'
+          msg: '[TRK-05] Türkçe metinde cases.Lower(language.Turkish) kullan; değilse //nolint ile gerekçelendir.'
+        - pattern: '^md5\.|^sha1\.'
+          msg: '[AUTH-05] Parola için argon2id kullan; md5/sha1 yasak.'
+        - pattern: '^rand\.(Int|Intn|Read)$'
+          msg: '[AUTH-01] Sır/token üretiminde crypto/rand kullan, math/rand değil.'
+
+    depguard:
+      rules:
+        main:
+          deny:
+            - pkg: github.com/gofiber/fiber
+              desc: '[VER-05] Gin kullanılır — bkz. adr/0001-http-framework.md'
+            - pkg: github.com/labstack/echo
+              desc: '[VER-05] Gin kullanılır — bkz. adr/0001-http-framework.md'
+            - pkg: github.com/lib/pq
+              desc: '[VER-05] pgx/v5 kullanılır — bkz. adr/0003-postgres-surucu.md'
+            - pkg: gorm.io/gorm
+              desc: '[VER-06] ORM yasak — bkz. adr/0003-postgres-surucu.md'
+            - pkg: entgo.io/ent
+              desc: '[VER-06] ORM yasak — bkz. adr/0003-postgres-surucu.md'
+            - pkg: github.com/spf13/viper
+              desc: '[VER-08] os.LookupEnv kullanılır — bkz. adr/0006-konfigurasyon.md'
+            - pkg: github.com/knadh/koanf
+              desc: '[VER-08] os.LookupEnv kullanılır — bkz. adr/0006-konfigurasyon.md'
+            - pkg: go.uber.org/zap
+              desc: '[VER-05] log/slog kullanılır — bkz. adr/0005-loglama.md'
+            - pkg: github.com/rs/zerolog
+              desc: '[VER-05] log/slog kullanılır — bkz. adr/0005-loglama.md'
+            - pkg: github.com/sirupsen/logrus
+              desc: '[VER-05] log/slog kullanılır — bkz. adr/0005-loglama.md'
+            - pkg: github.com/stretchr/testify
+              desc: '[VER-05] stdlib testing kullanılır — bkz. adr/0011-test-yaklasimi.md'
+            - pkg: github.com/gofrs/uuid
+              desc: '[VER-05] google/uuid kullanılır.'
+
+    gosec:
+      excludes:
+        - G104   # errcheck ile örtüşüyor
+
+  exclusions:
+    rules:
+      # Testlerde bu kontroller gürültü üretir; kapsam dışı.
+      - path: _test\.go
+        linters: [errcheck, gosec, forbidigo, noctx]
+      # main.go'da os.Exit ve başlangıç logu meşru.
+      - path: cmd/main\.go
+        linters: [forbidigo]
+        text: 'log/slog'
+
+formatters:
+  enable:
+    - gofmt

@@ -1,0 +1,31 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "web-standards",
+  "description": "Binding engineering standards for web projects: frontend (React + Vite + TypeScript + nginx + Docker + MapLibre) and backend (Go + Gin microservices).",
+  "owner": {
+    "name": "Samet Yasin Uysal"
+  },
+  "metadata": {
+    "pluginRoot": "./plugins"
+  },
+  "plugins": [
+    {
+      "name": "frontend-standards",
+      "source": "./plugins/frontend-standards",
+      "description": "Frontend engineering standard: React 19 + Vite 8 + TypeScript, feature-based structure, TanStack Query, MapLibre GPU rendering rules, i18n parity, SEO without stale builds, Docker + nginx templates, CI gates. 22 rule files, 21 ADRs, check tools.",
+      "version": "1.0.0",
+      "category": "engineering-standards",
+      "keywords": ["react", "vite", "typescript", "nginx", "docker", "maplibre", "i18n", "seo", "standards"],
+      "license": "MIT"
+    },
+    {
+      "name": "backend-standards",
+      "source": "./plugins/backend-standards",
+      "description": "Backend engineering standard (Turkish): Go + Gin microservices behind a gateway. Clean architecture, API contract, security, resilience, PostgreSQL/PostGIS, cache, observability, Docker, CI. 20 rule files, 18 ADRs, check script.",
+      "version": "1.0.0",
+      "category": "engineering-standards",
+      "keywords": ["go", "gin", "microservices", "postgres", "postgis", "standards"],
+      "license": "MIT"
+    }
+  ]
+}
