@@ -1,0 +1,9 @@
+{
+  "initial": 262144,
+  "chunk": 153600,
+  "total": 1572864,
+  "entries": {
+    "react-vendor": 61440,
+    "maplibre": 262144
+  }
+}

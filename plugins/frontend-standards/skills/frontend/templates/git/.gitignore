@@ -1,0 +1,56 @@
+# Git ignore rules for a React + Vite + TypeScript app ([CI-25]).
+
+# --- dependencies -----------------------------------------------------------
+node_modules/
+.npm/
+
+# --- build output -----------------------------------------------------------
+dist/
+dist-ssr/
+build/
+*.tsbuildinfo
+
+# --- test and tooling caches ------------------------------------------------
+coverage/
+playwright-report/
+test-results/
+blob-report/
+.playwright/
+.eslintcache
+.vite/
+stats.html
+
+# --- environment: every .env* EXCEPT the committed example ------------------
+# A committed .env.prod is in the history forever; rotating the secrets is the only fix.
+.env
+.env.*
+!.env.example
+!deployments/**/.env.example
+
+# --- large binaries: these belong in object storage or a volume ([CI-27]) ---
+*.mbtiles
+*.pmtiles
+*.gpkg
+*.zip
+*.7z
+
+# --- editors and OS ---------------------------------------------------------
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+.idea/
+.DS_Store
+Thumbs.db
+*.swp
+
+# --- logs -------------------------------------------------------------------
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# --- local scratch ----------------------------------------------------------
+*.local
+*.local.json
+tmp/

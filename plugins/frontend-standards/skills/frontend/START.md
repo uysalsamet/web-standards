@@ -96,29 +96,40 @@ bash frontend-standards/tools/nginx-smoke.sh \
 ## Step 3 — Wire the checks into CI
 
 `templates/github/workflows/ci.yml` already contains the gate from
-[14-GIT-CI.md](14-GIT-CI.md) §4. Make these checks **required** in the branch protection
-rules, otherwise the gate is decorative:
+[14-GIT-CI.md](14-GIT-CI.md). Make these twelve checks **required** in the branch
+protection rules, otherwise the gate is decorative:
 
 `lint` · `typecheck` · `format:check` · `i18n:check` · `test` · `build` · `size:check` ·
-`standards:check` · `nginx:test` · `audit` · `gen:check`
+`standards:check` · `nginx:test` · `audit` · `gen:check` · `docker:build`
+
+`e2e` runs on `main` and nightly rather than on every pull request, so it is not in the
+required list. See [14-GIT-CI.md](14-GIT-CI.md) for what each check costs in wall time.
 
 Add the scripts to `package.json`:
 
 ```json
 {
   "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
     "lint": "eslint . --max-warnings 0",
     "typecheck": "tsc -b --noEmit",
     "format:check": "prettier --check .",
     "test": "vitest run --coverage",
-    "build": "tsc -b && vite build",
+    "test:watch": "vitest",
+    "e2e": "playwright test",
     "i18n:check": "node frontend-standards/tools/check-i18n.mjs src/shared/i18n/locales --src src",
     "size:check": "node frontend-standards/tools/check-bundle-size.mjs dist budget.json",
     "standards:check": "bash frontend-standards/tools/check-standards.sh .",
+    "nginx:test": "bash frontend-standards/tools/nginx-smoke.sh deployments/main/nginx/default.conf.template deployments/main/.env.example",
+    "gen:check": "npm run gen:api && npm run gen:i18n && git diff --exit-code",
     "analyze": "vite build --mode analyze"
   }
 }
 ```
+
+`docker:build` and `audit` are CI steps rather than npm scripts; their commands are in
+[14-GIT-CI.md](14-GIT-CI.md).
 
 ---
 

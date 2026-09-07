@@ -300,6 +300,10 @@ const RuntimeConfigSchema = z.object({
   release: z.string().min(1),           // git sha, injected by the build ([OBS-05])
   environment: z.enum(['local', 'staging', 'production']),
   features: z.record(z.string(), z.boolean()).default({}),
+  // Public sites only. Canonical URLs, hreflang alternates and OG tags need an absolute
+  // origin, and it differs per environment, so it cannot be a build-time constant ([SEO-12]).
+  siteUrl: z.string().url().optional(),
+  siteName: z.string().min(1).optional(),
 })
 export type RuntimeConfig = z.infer<typeof RuntimeConfigSchema>
 

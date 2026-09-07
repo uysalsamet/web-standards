@@ -1,0 +1,366 @@
+# =============================================================================
+# default.conf.template — server{} level.
+#
+# Copied to /etc/nginx/templates/default.conf.template. The official entrypoint
+# script 20-envsubst-on-templates.sh renders it with envsubst into
+# $NGINX_ENVSUBST_OUTPUT_DIR (set to /tmp/nginx, because the container runs
+# read-only) and nginx.conf includes /tmp/nginx/*.conf from inside http{}.
+#
+# envsubst rules that bite:
+#   * Only ${NAME} and $NAME forms are substituted, and only for names that
+#     match NGINX_ENVSUBST_FILTER. This image is run with
+#     NGINX_ENVSUBST_FILTER='^(NGINX|APP)_' so that nginx's own runtime
+#     variables ($uri, $host, $request_id, $scheme ...) are never touched.
+#     Without the filter, an unrelated env var named `host` silently rewrites
+#     every `$host` in this file.
+#   * An empty variable renders an empty string. `proxy_pass http://${X};`
+#     with X unset becomes `proxy_pass http:///;` and nginx refuses to start.
+#     20-render-config.sh fails the container before that happens.
+#   * A regex containing { } must be quoted (see the maps in nginx.conf).
+#
+# The SAME file is used in local and production. The only difference between
+# environments is the env file. Do not fork this template.
+# =============================================================================
+
+# --- Upstreams with a connection pool ---------------------------------------
+# Core services get a real upstream{} block so keepalive works. Measured on the
+# reference deployment: without `keepalive` plus `proxy_http_version 1.1` plus
+# `Connection ""`, nginx opened a fresh TCP connection for EVERY tile, and a
+# single viewport asks for 16 to 32 tiles.
+#
+# The cost of upstream{}: nginx resolves the server name ONCE at startup. If
+# the host does not resolve, nginx does not start at all
+# ([emerg] host not found in upstream). Use this form only for services that
+# must be up anyway; use the set $var + resolver form below for optional ones.
+upstream api_backend {
+    server ${NGINX_UPSTREAM_API};
+    keepalive 32;
+}
+
+upstream tile_backend {
+    server ${NGINX_UPSTREAM_TILES};
+    keepalive 32;
+}
+
+server {
+    # IPv4 only on purpose: `listen [::]:8080` fails at startup on a daemon or
+    # network without IPv6, and the container is only ever reached through the
+    # Docker network or a published port.
+    listen       8080;
+    server_name  _;
+
+    root  /usr/share/nginx/html;
+    index index.html;
+
+    server_tokens off;
+    gzip_static   on;
+
+    charset       utf-8;
+    charset_types text/css application/json application/javascript text/plain image/svg+xml;
+
+    # The container listens on 8080 but is published on another host port
+    # (:90 on the reference deployment). nginx knows nothing about that port,
+    # so every absolute redirect it generates drops it and the browser lands on
+    # the wrong origin. Relative redirects keep whatever origin the client used.
+    absolute_redirect off;
+
+    # Docker's embedded DNS. Required by every `proxy_pass http://$variable`
+    # location below; resolution then happens per request instead of at startup.
+    resolver 127.0.0.11 valid=10s ipv6=off;
+    resolver_timeout 5s;
+
+    # Default body limit. Upload paths raise it locally ([NGX-22]); a global
+    # 1024M lets any unauthenticated client park a gigabyte in /tmp.
+    client_max_body_size 1m;
+    client_body_timeout  30s;
+    client_header_timeout 15s;
+
+    # Values for the shared header include. $csp must be ONE line: a quoted
+    # nginx string may span lines, but the newlines end up inside the header.
+    set $csp "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self' wss://${NGINX_PUBLIC_HOST}; worker-src 'self' blob:; frame-src 'none'; frame-ancestors 'none'; object-src 'none'; base-uri 'self'; form-action 'self'; manifest-src 'self'; report-uri /csp-report";
+    set $app_release "${APP_RELEASE}";
+
+    # -------------------------------------------------------------------------
+    # 1. Operational endpoints
+    # -------------------------------------------------------------------------
+
+    # Cheap enough to poll every 10 s from the Docker HEALTHCHECK. Not logged
+    # (see the $loggable_request map in nginx.conf) and never reaches the SPA
+    # fallback, so a broken index.html still reports the container as unhealthy.
+    location = /healthz {
+        access_log off;
+        include /etc/nginx/snippets/security-headers.conf;
+        default_type text/plain;
+        return 200 "ok\n";
+    }
+
+    # Written into dist/ at build time ([OBS-18]). Deploy verification reads
+    # it: curl -s https://host/__version.json | jq -r .release
+    location = /__version.json {
+        include /etc/nginx/snippets/security-headers.conf;
+        add_header Cache-Control "no-cache" always;
+        default_type application/json;
+        try_files /__version.json =404;
+    }
+
+    # -------------------------------------------------------------------------
+    # 2. Static bundle ([GEN-12])
+    # -------------------------------------------------------------------------
+
+    # no-cache, not no-store: the browser may keep the file but must
+    # revalidate. A 304 on index.html is ~200 bytes; a no-store index.html is a
+    # full download on every navigation.
+    location = /index.html {
+        include /etc/nginx/snippets/security-headers.conf;
+        add_header Cache-Control "no-cache" always;
+        etag on;
+    }
+
+    # Rendered at container start by 20-render-config.sh into the /tmp tmpfs,
+    # because /usr/share/nginx/html is root-owned and read-only.
+    # no-store, not no-cache: this file decides which API the app talks to. A
+    # revalidation that a proxy answers from its own cache points a production
+    # browser at a staging gateway ([SEC-13]).
+    location = /config.js {
+        alias /tmp/nginx/config.js;
+        include /etc/nginx/snippets/security-headers.conf;
+        add_header Cache-Control "no-store" always;
+        default_type application/javascript;
+    }
+
+    # Content-hashed filenames. immutable means the browser does not even send
+    # a conditional request for a year.
+    #
+    # Deliberately a PREFIX location, not `^~`: `^~` would stop nginx from
+    # evaluating the regex locations below, and the *.map deny rule is a regex.
+    # try_files ... =404 keeps a missing asset a 404 instead of an HTML page
+    # served with Content-Type: application/javascript, which the browser
+    # reports as a confusing syntax error.
+    location /assets/ {
+        include /etc/nginx/snippets/security-headers.conf;
+        add_header Cache-Control "public, max-age=31536000, immutable" always;
+        try_files $uri =404;
+    }
+
+    # robots.txt is environment dependent: staging must never be indexed
+    # ([SEO-xx]). NGINX_ROBOTS_POLICY is "allow" or "deny".
+    location = /robots.txt {
+        include /etc/nginx/snippets/security-headers.conf;
+        add_header Cache-Control "public, max-age=300" always;
+        default_type text/plain;
+        try_files /robots.${NGINX_ROBOTS_POLICY}.txt /robots.txt =404;
+    }
+
+    # Source maps are uploaded to the error tracker, never served ([SEC-22]).
+    location ~* \.map$ {
+        access_log off;
+        deny all;
+    }
+
+    # .git, .env, .htpasswd and friends, if one ever lands in dist/.
+    location ~ /\. {
+        access_log off;
+        deny all;
+    }
+
+    # -------------------------------------------------------------------------
+    # 3. Reverse proxy ([GEN-22]) — one location per upstream class
+    # -------------------------------------------------------------------------
+    # Every prefix here is also a Vite dev-proxy prefix, byte for byte, so the
+    # application code never changes between local and production.
+
+    location /api/ {
+        limit_req zone=api burst=40 nodelay;
+
+        # No trailing slash on proxy_pass: the FULL request URI including /api/
+        # is forwarded, because the gateway parses the prefix itself.
+        # Adding a slash here would strip /api/ and break every route.
+        proxy_pass http://api_backend;
+
+        proxy_http_version 1.1;
+        proxy_set_header Connection "";            # required for upstream keepalive
+        proxy_set_header Host              $http_host;   # $host drops the port
+        proxy_set_header X-Real-IP         $remote_addr;
+        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-Host  $http_host;
+        proxy_set_header X-Request-Id      $req_id;
+
+        # Session cookies the gateway sets on /auth must be visible to the
+        # whole app, not only under /api/.
+        proxy_cookie_path /api/ /;
+
+        proxy_connect_timeout 5s;
+        proxy_send_timeout    30s;
+        proxy_read_timeout    60s;
+
+        # A backend stack trace is not a user-facing error page ([SEC-24]).
+        proxy_intercept_errors on;
+        error_page 500 502 503 504 @api_error;
+    }
+
+    # Uploads are the only place a large body is accepted, and the body is
+    # streamed instead of buffered to disk first.
+    location /api/uploads/ {
+        client_max_body_size 50m;
+        proxy_request_buffering off;
+        proxy_pass http://api_backend;
+        proxy_http_version 1.1;
+        proxy_set_header Connection "";
+        proxy_set_header Host              $http_host;
+        proxy_set_header X-Real-IP         $remote_addr;
+        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Request-Id      $req_id;
+        proxy_read_timeout 300s;
+    }
+
+    # Vector/raster tiles. Cached here so a pan over already-seen area never
+    # reaches the tile server.
+    location /tiles/ {
+        # Trailing slash: /tiles/foo/1/2/3.pbf -> upstream /foo/1/2/3.pbf
+        proxy_pass http://tile_backend/;
+
+        proxy_http_version 1.1;
+        proxy_set_header Connection "";
+        proxy_set_header Host              $http_host;
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        proxy_connect_timeout 3s;
+        proxy_send_timeout    10s;
+        proxy_read_timeout    10s;
+
+        proxy_cache            tiles;
+        proxy_cache_key        "$scheme$request_method$host$request_uri";
+        proxy_cache_valid      200 206  7d;
+        proxy_cache_valid      404      1m;
+        # One request fills the cache entry; the other 31 tiles of the viewport
+        # wait for it instead of stampeding the tile server.
+        proxy_cache_lock       on;
+        proxy_cache_lock_timeout 5s;
+        # A tile server restart must not blank the map.
+        proxy_cache_use_stale  error timeout updating http_500 http_502 http_503 http_504;
+        proxy_cache_background_update on;
+        # Tile servers commonly send Cache-Control: no-cache or an Expires in
+        # the past; ignoring them is what makes this cache work at all.
+        proxy_ignore_headers   Cache-Control Expires Set-Cookie X-Accel-Expires Vary;
+
+        include /etc/nginx/snippets/security-headers.conf;
+        add_header X-Cache-Status $upstream_cache_status always;
+        add_header Cache-Control "public, max-age=86400" always;
+    }
+
+    # Map style JSON, glyphs and sprites from the map server. Optional service:
+    # variable + resolver so a stopped tileserver-gl 502s this path only
+    # instead of preventing nginx from starting.
+    #
+    # NOTE the honest cost: proxy_pass with a variable bypasses upstream{},
+    # so there is NO keepalive pool here. Style and sprite requests are a
+    # handful per session, so the extra handshakes do not matter. Tiles, which
+    # are thousands per session, use the upstream{} form above.
+    location /map/ {
+        set $map_backend "${NGINX_UPSTREAM_MAP}";
+        # Strip the /map prefix so the map server sees its own root paths.
+        rewrite ^/map/(.*)$ /$1 break;
+        proxy_pass http://$map_backend;
+
+        proxy_http_version 1.1;
+        proxy_set_header Host              $http_host;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        # The map server generates absolute tile URLs in its TileJSON; without
+        # this it emits /styles/... instead of /map/styles/... and every glyph
+        # 404s.
+        proxy_set_header X-Forwarded-Prefix /map;
+
+        proxy_connect_timeout 3s;
+        proxy_read_timeout    10s;
+    }
+
+    # Font files the PDF export loads from the app's own public/fonts.
+    # A regex location beats any prefix location, so this wins over /fonts/
+    # below while the map server keeps /fonts/<fontstack>/<range>.pbf.
+    location ~ ^/fonts/.+\.(ttf|otf|woff2?)$ {
+        include /etc/nginx/snippets/security-headers.conf;
+        add_header Cache-Control "public, max-age=31536000, immutable" always;
+        try_files $uri =404;
+    }
+
+    location /fonts/ {
+        set $map_backend_fonts "${NGINX_UPSTREAM_MAP}";
+        proxy_pass http://$map_backend_fonts;
+        proxy_http_version 1.1;
+        proxy_set_header Host $http_host;
+        proxy_read_timeout 10s;
+    }
+
+    # MQTT over WebSocket. No trailing slash on the location: the client
+    # connects to exactly /mqtt.
+    location /mqtt {
+        set $mqtt_backend "${NGINX_UPSTREAM_MQTT}";
+        proxy_pass http://$mqtt_backend/mqtt;
+
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade    $http_upgrade;
+        proxy_set_header Connection $connection_upgrade;
+        proxy_set_header Host       $http_host;
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        # A broker connection is idle between messages by design. The default
+        # 60 s read timeout closes it and the client reconnect-loops.
+        proxy_read_timeout 3600s;
+        proxy_send_timeout 3600s;
+        proxy_buffering    off;
+    }
+
+    # WebRTC (WHEP) signalling and other streaming bodies. Buffering here adds
+    # latency and, for SSE, hides events until the buffer fills.
+    location /media/ {
+        set $media_backend "${NGINX_UPSTREAM_MEDIA}";
+        proxy_pass http://$media_backend/;
+
+        proxy_http_version 1.1;
+        proxy_set_header Host       $http_host;
+        proxy_set_header Upgrade    $http_upgrade;
+        proxy_set_header Connection $connection_upgrade;
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        proxy_buffering         off;
+        proxy_request_buffering off;
+        proxy_cache             off;
+        proxy_connect_timeout   5s;
+        proxy_read_timeout      300s;
+        proxy_send_timeout      300s;
+    }
+
+    # -------------------------------------------------------------------------
+    # 4. Error pages
+    # -------------------------------------------------------------------------
+
+    location @api_error {
+        include /etc/nginx/snippets/security-headers.conf;
+        add_header Cache-Control "no-store" always;
+        default_type application/json;
+        # Shape matches the backend error contract so the API client parses it
+        # like any other error instead of throwing on an HTML body ([API-xx]).
+        return 502 '{"error":{"code":"upstream_unavailable","message":"Service temporarily unavailable","requestId":"$req_id"}}';
+    }
+
+    error_page 500 502 503 504 /__error5xx.html;
+    location = /__error5xx.html {
+        internal;
+        include /etc/nginx/snippets/security-headers.conf;
+        add_header Cache-Control "no-store" always;
+        default_type text/html;
+        return 503 '<!doctype html><meta charset="utf-8"><title>Service unavailable</title><p>The service is temporarily unavailable. Please retry in a moment.</p>';
+    }
+
+    # -------------------------------------------------------------------------
+    # 5. SPA fallback — LAST, so nothing above can be swallowed by it
+    # -------------------------------------------------------------------------
+    location / {
+        include /etc/nginx/snippets/security-headers.conf;
+        add_header Cache-Control "no-cache" always;
+        # $uri/ before /index.html so a real directory still gets its index.
+        try_files $uri $uri/ /index.html;
+    }
+}

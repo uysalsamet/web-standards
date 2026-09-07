@@ -1,0 +1,125 @@
+# =============================================================================
+# deployments/main/docker-compose.yml — PRODUCTION shape.
+#
+#   BUILD_ID=$(git rev-parse --short HEAD) GIT_SHA=$(git rev-parse HEAD) \
+#   docker compose -f deployments/main/docker-compose.yml \
+#                  --env-file deployments/main/.env.prod \
+#                  up -d --build
+#
+# One service. The SPA image is its own nginx ([ADR-0013]); there is no second
+# nginx in front of it inside this project. If the host runs several apps, the
+# shared edge proxy is a separate compose project ([OPS-39]).
+# =============================================================================
+
+services:
+  web:
+    build:
+      context: ../../                      # repository root; see .dockerignore
+      dockerfile: deployments/main/Dockerfile
+      args:
+        # No `:-` fallback on BUILD_ID either: a build that silently reuses the
+        # cached "dev" layer ships yesterday's bundle under today's tag.
+        BUILD_ID: ${BUILD_ID}
+        VITE_BUILD_ID: ${BUILD_ID}
+        GIT_SHA: ${GIT_SHA}
+    # Tagged by short sha, never `latest` ([VER-02], [OPS-33]). Rollback is
+    # `docker compose up -d` with the previous BUILD_ID.
+    image: ${COMPOSE_PROJECT_NAME}-web:${BUILD_ID}
+    container_name: ${COMPOSE_PROJECT_NAME}-web
+
+    restart: unless-stopped
+
+    ports:
+      # Container always listens on 8080. Only the host side varies.
+      - "${NGINX_PORT}:8080"
+
+    environment:
+      # Runtime config -> /config.js. No `:-default` anywhere ([OPS-09]):
+      # a missing variable must stop the container, not proxy to localhost.
+      APP_API_BASE_URL: ${APP_API_BASE_URL}
+      APP_TILE_BASE_URL: ${APP_TILE_BASE_URL}
+      APP_MAP_STYLE_URL: ${APP_MAP_STYLE_URL}
+      APP_MQTT_WS_URL: ${APP_MQTT_WS_URL}
+      APP_ENVIRONMENT: ${APP_ENVIRONMENT}
+      APP_RELEASE: ${GIT_SHA}
+      APP_SITE_URL: ${APP_SITE_URL}
+      APP_FEATURES_JSON: ${APP_FEATURES_JSON}
+      # nginx template substitution.
+      NGINX_PUBLIC_HOST: ${NGINX_PUBLIC_HOST}
+      NGINX_ROBOTS_POLICY: ${NGINX_ROBOTS_POLICY}
+      NGINX_UPSTREAM_API: ${NGINX_UPSTREAM_API}
+      NGINX_UPSTREAM_TILES: ${NGINX_UPSTREAM_TILES}
+      NGINX_UPSTREAM_MAP: ${NGINX_UPSTREAM_MAP}
+      NGINX_UPSTREAM_MQTT: ${NGINX_UPSTREAM_MQTT}
+      NGINX_UPSTREAM_MEDIA: ${NGINX_UPSTREAM_MEDIA}
+
+    healthcheck:
+      # Duplicates the Dockerfile HEALTHCHECK on purpose: `depends_on:
+      # condition: service_healthy` in other compose projects reads THIS one,
+      # and an image rebuilt from a different Dockerfile still gets checked.
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:8080/healthz || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+
+    # Without rotation, json-file logs grow until the host disk fills. 10m x 3
+    # is ~30 MB per container, roughly a week of traffic for an internal app.
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    deploy:
+      resources:
+        limits:
+          # nginx serving static files plus a 50 MB tile cache zone sits at
+          # 25 to 40 MB RSS. 128m leaves headroom and turns a leak into a
+          # container restart instead of an OOM-killed host.
+          memory: 128m
+        reservations:
+          memory: 32m
+
+    # --- hardening -----------------------------------------------------------
+    # The image has no reason to write anywhere except its caches.
+    read_only: true
+    tmpfs:
+      # nginx.pid and the proxy/client temp paths.
+      - /tmp:mode=1777,size=16m
+      # The envsubst output directory, mounted separately because it must
+      # already exist when 20-envsubst-on-templates.sh runs; a bare tmpfs on
+      # /tmp gives an empty directory and that script then renders nothing.
+      - /tmp/nginx:mode=1777,size=4m
+      - /run:mode=0755,size=4m
+    volumes:
+      # The tile proxy cache ([NGX-36]) needs a writable, PERSISTENT path.
+      # A tmpfs here would discard a multi-gigabyte cache on every deploy and
+      # charge it to RAM. If the deployment does not proxy tiles, replace this
+      # volume with `- /var/cache/nginx:mode=0755,uid=101,gid=101,size=64m`
+      # under tmpfs above and drop proxy_cache_path from nginx.conf. The uid is
+      # not optional there: a plain tmpfs is root-owned and nginx (uid 101)
+      # cannot create /var/cache/nginx/tiles inside it, which is an [emerg] at
+      # startup, not a warning.
+      - nginx-cache:/var/cache/nginx
+    security_opt:
+      # Blocks setuid binaries from gaining privileges. nginx-unprivileged
+      # never needs them.
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+
+    networks:
+      - shared
+
+volumes:
+  nginx-cache:
+
+networks:
+  shared:
+    # Created once per host, outside this project:
+    #   docker network create clavus_shared_network
+    # External so the backend compose project and this one can address each
+    # other by service name without one owning the other's lifecycle.
+    external: true
+    name: clavus_shared_network

@@ -1,0 +1,62 @@
+# =============================================================================
+# .dockerignore — REPOSITORY ROOT, not deployments/ ([OPS-06]).
+# The build context is the repo root, so this file decides what the daemon
+# uploads and what `COPY . .` can put into a layer.
+#
+# Two reasons it is not optional:
+#   1. node_modules and deployments/map data are gigabytes. Sending them makes
+#      every build slow even when nothing changed.
+#   2. `COPY . .` without it puts .env.prod and .git into an image layer.
+#      Deleting the file in a later RUN does not remove it from the layer;
+#      anyone with the image can `docker save` and read it ([OPS-17]).
+# =============================================================================
+
+# Reinstalled by `npm ci` inside the image; a host copy is also the wrong
+# platform (native bindings built for Windows/macOS).
+node_modules
+*/node_modules
+
+# Built inside the image.
+dist
+build
+.vite
+coverage
+playwright-report
+test-results
+
+# SECRETS. .env.example is the only env file allowed in the context.
+.env
+.env.*
+!.env.example
+deployments/**/.env
+deployments/**/.env.*
+!deployments/**/.env.example
+*.pem
+*.key
+*.p12
+
+# History and CI metadata are not build inputs. .git alone is often 200 MB+.
+.git
+.gitignore
+.github
+.gitlab-ci.yml
+
+# Tile data, mbtiles archives and service volumes under deployments/ are for
+# the map compose project, not for the frontend image. On the reference
+# deployment this directory alone was 40 GB.
+deployments/map
+deployments/**/data
+**/*.mbtiles
+**/*.pmtiles
+
+# Editor and OS noise.
+.vscode
+.idea
+.DS_Store
+Thumbs.db
+*.swp
+
+# Docs and agent instruction files do not affect the bundle.
+docs
+*.md
+!README.md

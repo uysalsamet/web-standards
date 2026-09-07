@@ -67,14 +67,14 @@ PKG="$ROOT/package.json"
 if [[ ! -f "$PKG" ]]; then
   violation MUST VER-01 "$ROOT" "package.json not found; is this the app root?"
 else
-  engines=$(node -e "const p=require(process.argv[1]);console.log((p.engines&&p.engines.node)||'')" "$PKG" 2>/dev/null)
+  engines=$(node -e "const p=JSON.parse(require('node:fs').readFileSync(process.argv[1],'utf8'));console.log((p.engines&&p.engines.node)||'')" "$PKG" 2>/dev/null)
   [[ "$engines" =~ 24 ]] || violation MUST VER-01 "$PKG" "engines.node must be '>=24.0.0' (found '${engines:-none}')"
 
   [[ -f "$ROOT/package-lock.json" ]] || violation MUST VER-04 "$ROOT" "package-lock.json missing; installs are not deterministic"
   [[ -f "$ROOT/.nvmrc" ]] || violation SHOULD VER-01 "$ROOT" ".nvmrc missing (should contain 24)"
 
   FORBIDDEN='axios ky superagent moment dayjs luxon lodash underscore styled-components @emotion/react @emotion/styled @stitches/react mapbox-gl react-map-gl react-maplibre-gl leaflet react-leaflet @turf/turf uuid redux-thunk redux-saga redux-observable react-helmet react-scripts next remix @remix-run/react'
-  deps=$(node -e "const p=require(process.argv[1]);console.log(Object.keys({...p.dependencies,...p.devDependencies}).join(' '))" "$PKG" 2>/dev/null)
+  deps=$(node -e "const p=JSON.parse(require('node:fs').readFileSync(process.argv[1],'utf8'));console.log(Object.keys({...p.dependencies,...p.devDependencies}).join(' '))" "$PKG" 2>/dev/null)
   for f in $FORBIDDEN; do
     for d in $deps; do
       [[ "$d" == "$f" ]] && violation MUST VER-05 "$PKG" "forbidden dependency '$f' (see 02 §4 for the replacement)"
@@ -90,7 +90,7 @@ else
   done
   # scripts
   for s in lint typecheck test build; do
-    node -e "const p=require(process.argv[1]);process.exit(p.scripts&&p.scripts['$s']?0:1)" "$PKG" 2>/dev/null \
+    node -e "const p=JSON.parse(require('node:fs').readFileSync(process.argv[1],'utf8'));process.exit(p.scripts&&p.scripts['$s']?0:1)" "$PKG" 2>/dev/null \
       || violation MUST CI-02 "$PKG" "npm script '$s' missing; CI gate needs it ([GEN-23])"
   done
 fi
@@ -158,7 +158,7 @@ if [[ ${#TS_FILES[@]} -gt 0 ]]; then
 
   # [GEN-18] DOM markers; [MAP-01] second map instance
   while IFS= read -r line; do
-    violation SHOULD GEN-18 "$line" "maplibregl.Marker (DOM). Allowed only for ≤ 20 rich widgets; datasets must be layers"
+    violation SHOULD GEN-18 "$line" "maplibregl.Marker (DOM). At most 20 rich widgets ([MAP-11]); datasets must be layers"
   done < <(scan 'new (maplibregl\.)?Marker\(' "${TS_FILES[@]}")
   # Only an explicit maplibre namespace counts. A bare `new Map(` is the native JS Map
   # and matching it produced hundreds of false positives on the reference repo.
@@ -167,7 +167,7 @@ if [[ ${#TS_FILES[@]} -gt 0 ]]; then
   done < <(scan 'new (maplibregl|maplibre|mapboxgl)\.Map\(' "${TS_FILES[@]}" | grep -vE 'src/shared/map/' || true)
   # setData used for highlight (heuristic: setData near hover/selected/highlight names)
   while IFS= read -r line; do
-    violation SHOULD MAP-13 "$line" "setData with hover/selected/highlight data; use feature-state instead"
+    violation SHOULD MAP-18 "$line" "setData with hover/selected/highlight data; use feature-state instead"
   done < <(scan 'setData\([^)]*(hover|selected|highlight)' "${TS_FILES[@]}")
 
   # [GEN-17] empty catch blocks (single-line and two-line forms)
@@ -250,9 +250,9 @@ if [[ ${#TS_FILES[@]} -gt 0 ]]; then
     violation SHOULD I18N-03 "$line" "literal Turkish text in JSX; use t('key')"
   done < <(scan '>[^<{]*[çğıöşüÇĞİÖŞÜ][^<{]*<' "${TSX_FILES[@]}")
 
-  # [STA-03] server data copied into Redux (heuristic: slice with fetch/thunk)
+  # [STA-28] HTTP performed by a thunk instead of a TanStack Query mutation
   while IFS= read -r line; do
-    violation MUST STA-03 "$line" "createAsyncThunk in a slice: server state belongs to TanStack Query"
+    violation MUST STA-28 "$line" "createAsyncThunk performs HTTP: server state belongs to TanStack Query"
   done < <(scan 'createAsyncThunk\(' "${TS_FILES[@]}")
 fi
 

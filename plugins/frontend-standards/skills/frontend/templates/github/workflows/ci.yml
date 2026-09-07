@@ -1,0 +1,165 @@
+# .github/workflows/ci.yml
+#
+# Actions are pinned to commit SHAs ([CI-14]). Resolve each one before first use:
+#   gh api repos/actions/checkout/git/ref/tags/v5.0.0 --jq .object.sha
+# and replace the REPLACE_WITH_SHA placeholders. Keep the version in the trailing comment
+# so the next upgrade knows what the SHA means.
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  schedule:
+    - cron: '0 2 * * *' # nightly e2e ([CI-13])
+
+# One run per ref. A new push cancels the previous run instead of queuing behind it.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+env:
+  NODE_VERSION: '24'
+
+jobs:
+  # ---------------------------------------------------------------- static checks
+  static:
+    name: ${{ matrix.script }}
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false # one red check must not hide the other three
+      matrix:
+        script: [lint, typecheck, format:check, i18n:check]
+    steps:
+      - uses: actions/checkout@REPLACE_WITH_SHA # v5.0.0
+      - uses: actions/setup-node@REPLACE_WITH_SHA # v5.0.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - run: npm ci --ignore-scripts # [CI-01], [VER-09]
+      - run: npm run ${{ matrix.script }}
+
+  test:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@REPLACE_WITH_SHA # v5.0.0
+      - uses: actions/setup-node@REPLACE_WITH_SHA # v5.0.0
+        with: { node-version: '24', cache: npm }
+      - run: npm ci --ignore-scripts
+      - run: npm test # vitest run --coverage; thresholds fail the job ([TEST-05])
+      - uses: actions/upload-artifact@REPLACE_WITH_SHA # v4.6.2
+        if: always()
+        with: { name: coverage, path: coverage/lcov.info, retention-days: 7 }
+
+  audit:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@REPLACE_WITH_SHA # v5.0.0
+      - uses: actions/setup-node@REPLACE_WITH_SHA # v5.0.0
+        with: { node-version: '24', cache: npm }
+      - run: npm ci --ignore-scripts
+      - run: npm audit --audit-level=high # [CI-08]
+
+  gen:
+    name: gen:check
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@REPLACE_WITH_SHA # v5.0.0
+      - uses: actions/setup-node@REPLACE_WITH_SHA # v5.0.0
+        with: { node-version: '24', cache: npm }
+      - run: npm ci --ignore-scripts
+      - run: npm run gen:check # regenerate + git diff --exit-code ([CI-12])
+
+  standards:
+    name: standards:check
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@REPLACE_WITH_SHA # v5.0.0
+      - uses: actions/setup-node@REPLACE_WITH_SHA # v5.0.0
+        with: { node-version: '24', cache: npm }
+      - run: npm ci --ignore-scripts
+      - run: npm run standards:check
+      - run: npm run nginx:test # renders the template and runs nginx -t ([CI-09])
+
+  # ---------------------------------------------------------------- build + budget
+  build:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@REPLACE_WITH_SHA # v5.0.0
+      - uses: actions/setup-node@REPLACE_WITH_SHA # v5.0.0
+        with: { node-version: '24', cache: npm }
+      - run: npm ci --ignore-scripts
+      - run: npm run build
+        env:
+          # Only build-time constants ([GEN-09]). URLs come from /config.js at runtime.
+          VITE_BUILD_ID: ${{ github.sha }}
+      - uses: actions/upload-artifact@REPLACE_WITH_SHA # v4.6.2
+        with: { name: dist, path: dist, retention-days: 7 }
+
+  size:
+    name: size:check
+    needs: build
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@REPLACE_WITH_SHA # v5.0.0
+      - uses: actions/download-artifact@REPLACE_WITH_SHA # v5.0.0
+        with: { name: dist, path: dist }
+      - uses: actions/setup-node@REPLACE_WITH_SHA # v5.0.0
+        with: { node-version: '24' }
+      - run: node frontend-standards/tools/check-bundle-size.mjs dist budget.json # [CI-06]
+
+  # ---------------------------------------------------------------- image smoke test
+  docker:
+    name: docker:build
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@REPLACE_WITH_SHA # v5.0.0
+      - name: Build image
+        run: |
+          docker build \
+            -f deployments/main/Dockerfile \
+            --build-arg GIT_SHA=${{ github.sha }} \
+            -t app:${{ github.sha }} .
+      - name: Run and probe
+        run: |
+          set -euo pipefail
+          docker run -d --name app-smoke -p 8080:8080 \
+            -e APP_API_BASE_URL=/api \
+            -e APP_ENVIRONMENT=staging \
+            app:${{ github.sha }}
+          # Poll instead of sleeping: nginx is ready in ~200 ms, but a cold runner can take 5 s.
+          for i in $(seq 1 30); do
+            curl -fsS http://localhost:8080/healthz && break || sleep 1
+          done
+          curl -fsS http://localhost:8080/healthz | grep -q ok
+          # config.js must exist, must be substituted, and must not be cached ([GEN-12]).
+          curl -fsSI http://localhost:8080/config.js | grep -qi 'cache-control:.*no-cache'
+          curl -fsS  http://localhost:8080/config.js | grep -q '__APP_CONFIG__'
+          ! curl -fsS http://localhost:8080/config.js | grep -q '\${'
+      - name: Container logs on failure
+        if: failure()
+        run: docker logs app-smoke
+      - name: Clean up
+        if: always()
+        run: docker rm -f app-smoke || true
+
+  # ---------------------------------------------------------------- e2e (not on PRs)
+  e2e:
+    if: github.event_name != 'pull_request'
+    needs: [build, docker]
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@REPLACE_WITH_SHA # v5.0.0
+      - uses: actions/setup-node@REPLACE_WITH_SHA # v5.0.0
+        with: { node-version: '24', cache: npm }
+      - run: npm ci --ignore-scripts
+      - run: npx playwright install --with-deps chromium
+      - run: npm run e2e
+        env:
+          E2E_BASE_URL: http://localhost:8080
+      - uses: actions/upload-artifact@REPLACE_WITH_SHA # v4.6.2
+        if: failure()
+        with: { name: playwright-report, path: playwright-report/, retention-days: 14 }

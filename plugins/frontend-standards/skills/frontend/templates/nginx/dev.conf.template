@@ -1,0 +1,127 @@
+# =============================================================================
+# dev.conf.template — the LOCAL edge server block.
+#
+# Mounted into the dev nginx container at
+# /etc/nginx/templates/default.conf.template (the mount replaces the
+# production template, so only this file renders).
+#
+# Purpose: run the REAL nginx, with the real nginx.conf, the real
+# security-headers.conf and the real proxy prefixes, in front of the Vite dev
+# server. Everything the browser does in production goes through the same
+# code path locally: same origin, same /api/, /tiles/, /map/, /mqtt, /media/
+# prefixes, same header set, same 502 behaviour.
+#
+# What is deliberately DIFFERENT from default.conf.template, and only this:
+#   * `location /` proxies to the Vite dev server instead of try_files.
+#   * Every upstream is the variable + resolver form (a dev machine has
+#     services stopped all the time; nginx must still start).
+#   * No proxy_cache: a cached tile hides a tile-server change.
+#   * No CSP: the Vite dev server serves inline scripts and an eval-based HMR
+#     client. Enforcing production CSP here would only teach you to ignore it.
+#     CSP is verified against the built image, not against the dev server
+#     ([SEC-08], [NGX-47]).
+#
+# ACCEPTED COST: this file duplicates the proxy locations of
+# default.conf.template and can drift from it. The drift is caught by the
+# checklist item in 12-NGINX.md §12, not by a tool.
+# =============================================================================
+
+server {
+    listen      8080;
+    server_name localhost;
+
+    server_tokens off;
+    absolute_redirect off;
+
+    resolver 127.0.0.11 valid=10s ipv6=off;
+    resolver_timeout 5s;
+
+    client_max_body_size 1m;
+
+    # Empty in dev: see the header comment. security-headers.conf omits an
+    # add_header whose value is empty.
+    set $csp "";
+    set $app_release "dev";
+
+    location = /healthz {
+        access_log off;
+        default_type text/plain;
+        return 200 "ok\n";
+    }
+
+    location /api/ {
+        set $api_backend "${NGINX_UPSTREAM_API}";
+        proxy_pass http://$api_backend;
+        proxy_http_version 1.1;
+        proxy_set_header Host              $http_host;
+        proxy_set_header X-Real-IP         $remote_addr;
+        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Request-Id      $req_id;
+        proxy_cookie_path /api/ /;
+        proxy_read_timeout 60s;
+    }
+
+    location /tiles/ {
+        set $tile_backend "${NGINX_UPSTREAM_TILES}";
+        proxy_pass http://$tile_backend/;
+        proxy_http_version 1.1;
+        proxy_set_header Host $http_host;
+        proxy_read_timeout 10s;
+    }
+
+    location /map/ {
+        set $map_backend "${NGINX_UPSTREAM_MAP}";
+        rewrite ^/map/(.*)$ /$1 break;
+        proxy_pass http://$map_backend;
+        proxy_http_version 1.1;
+        proxy_set_header Host $http_host;
+        proxy_set_header X-Forwarded-Prefix /map;
+        proxy_read_timeout 10s;
+    }
+
+    location /mqtt {
+        set $mqtt_backend "${NGINX_UPSTREAM_MQTT}";
+        proxy_pass http://$mqtt_backend/mqtt;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade    $http_upgrade;
+        proxy_set_header Connection $connection_upgrade;
+        proxy_set_header Host       $http_host;
+        proxy_read_timeout 3600s;
+    }
+
+    location /media/ {
+        set $media_backend "${NGINX_UPSTREAM_MEDIA}";
+        proxy_pass http://$media_backend/;
+        proxy_http_version 1.1;
+        proxy_set_header Host       $http_host;
+        proxy_set_header Upgrade    $http_upgrade;
+        proxy_set_header Connection $connection_upgrade;
+        proxy_buffering         off;
+        proxy_request_buffering off;
+        proxy_read_timeout 300s;
+    }
+
+    # Everything else, including /@vite/client, /src/*, /node_modules/.vite/*
+    # and the HMR WebSocket, goes to the Vite dev server.
+    location / {
+        set $vite_backend "${NGINX_UPSTREAM_VITE}";
+        proxy_pass http://$vite_backend;
+        proxy_http_version 1.1;
+
+        # HMR is a WebSocket on the same path. Without these two lines the
+        # client reconnect-loops and every save needs a manual refresh.
+        proxy_set_header Upgrade    $http_upgrade;
+        proxy_set_header Connection $connection_upgrade;
+
+        proxy_set_header Host              $http_host;
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        # The dev server can take 20 s to pre-bundle dependencies on the first
+        # request after a cold start.
+        proxy_connect_timeout 5s;
+        proxy_read_timeout    120s;
+        # Streaming module graph responses must not be buffered.
+        proxy_buffering off;
+    }
+}

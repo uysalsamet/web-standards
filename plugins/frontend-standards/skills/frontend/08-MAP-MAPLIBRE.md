@@ -580,7 +580,7 @@ Layers on top set their own `minzoom` at the zoom where the data is legible.
 > nothing visible. MapLibre overzooms automatically: data at `maxzoom: 14` renders sharp at 18.
 
 **[MAP-23] MUST:** Tile requests go to the same origin under `/tiles/`, proxied and cached by
-nginx ([NGX-18], [NGX-19]): `proxy_cache` with `inactive=7d`, `Cache-Control: public,
+nginx ([NGX-36], [NGX-37]): `proxy_cache` with `inactive=7d`, `Cache-Control: public,
 max-age=86400` on `.pbf`/`.png`/`.webp`, and `no-cache` on `.json` (TileJSON, style).
 > **Why:** A pan over a district requests 40 to 120 tiles. Without an edge cache every user
 > hits the tile server's SQLite; with it the second user is served from disk in under 1 ms.

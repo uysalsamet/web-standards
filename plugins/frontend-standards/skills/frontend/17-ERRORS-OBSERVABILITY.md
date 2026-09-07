@@ -758,10 +758,10 @@ and searched; the message is a constant string, the variable parts go in context
 ## 11. Health and version
 
 **[OBS-18] MUST:** The nginx image answers `GET /healthz` with `200 ok`, unlogged
-([NGX-11]), and `GET /__version` with `Cache-Control: no-cache` JSON of the form
+([NGX-06]), and `GET /__version.json` with `Cache-Control: no-cache` JSON of the form
 `{ "release": "<sha>", "builtAt": "<ISO 8601>" }` written into `dist/` at build time by
 the `versionFile` Vite plugin below. The Docker `HEALTHCHECK` ([OPS-05]) uses `/healthz`;
-deploy verification uses `/__version` and compares `release` to the sha that was pushed.
+deploy verification uses `/__version.json` and compares `release` to the sha that was pushed.
 > **Why:** "Is the new version live?" is otherwise answered by opening DevTools and reading
 > an asset hash. Ops can `curl` this, a deploy script can assert on it, and a bug report
 > can include it. `/healthz` is separate because it must be cheap enough to poll every
@@ -776,8 +776,8 @@ function versionFile(release: string): Plugin {
     name: 'version-file',
     apply: 'build',
     generateBundle() {
-      // Emitted without a hash and without an extension; nginx maps /__version to it with default_type application/json.
-      this.emitFile({ type: 'asset', fileName: '__version', source: JSON.stringify({ release, builtAt: new Date().toISOString() }) })
+      // Emitted without a hash and without an extension; nginx maps /__version.json to it with default_type application/json.
+      this.emitFile({ type: 'asset', fileName: '__version.json', source: JSON.stringify({ release, builtAt: new Date().toISOString() }) })
     },
   }
 }

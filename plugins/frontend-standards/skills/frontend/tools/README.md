@@ -17,6 +17,7 @@
 | `check-i18n.mjs` | Locale key parity, placeholder parity, plural parity, empty values, unused keys |
 | `check-bundle-size.mjs` | Bundle budgets against `budget.json` |
 | `nginx-smoke.sh` | Renders the nginx template with a dev env file and runs `nginx -t` in the image |
+| `check-refs.mjs` | Consistency of the standard itself: duplicate or undefined rule ids, numbering gaps, placeholder ids, broken links |
 | `fixtures/compliant-app/` | A minimal app that follows the standard. Used to prove the tools produce no false positives |
 
 They complement each other with ESLint: ESLint reads the TypeScript AST (exact), these
@@ -38,6 +39,9 @@ npm run build && node frontend-standards/tools/check-bundle-size.mjs dist budget
 
 # nginx config
 bash frontend-standards/tools/nginx-smoke.sh deployments/main/nginx/default.conf.template deployments/main/.env.local
+
+# The standard's own consistency (run when editing the standard, not the app)
+node frontend-standards/tools/check-refs.mjs frontend-standards
 ```
 
 Exit codes: **0** = clean · **1** = a MUST / MUST NOT violation (breaks CI).
@@ -95,9 +99,9 @@ Added to the pipeline in [14-GIT-CI.md](../14-GIT-CI.md) §4:
 |---|---|
 | [GEN-06] | `fetch(` outside `src/shared/api` |
 | [GEN-17] | Empty `catch` block, single-line and two-line forms |
-| [GEN-18] | `new maplibregl.Marker(` (warning; allowed for a few rich widgets) |
+| [GEN-18] | `new maplibregl.Marker(` (warning; at most 20 rich widgets per [MAP-11]) |
 | [MAP-01] | `new maplibregl.Map(` outside `src/shared/map` |
-| [MAP-13] | `setData(` with hover/selected/highlight data instead of `feature-state` |
+| [MAP-18] | `setData(` with hover/selected/highlight data instead of `feature-state` |
 | [SEC-01] | `dangerouslySetInnerHTML` outside `SafeHtml` |
 | [OBS-16] | `console.*` outside the logger wrapper |
 | [TS-05] | `any` in any form (`: any`, `as any`, `<any>`) |
@@ -111,7 +115,7 @@ Added to the pipeline in [14-GIT-CI.md](../14-GIT-CI.md) §4:
 | [STR-25] | File over the line limit (warning at the limit, error at 1.5×) |
 | [AUTH-04] | A token or JWT written to `localStorage`/`sessionStorage` |
 | [I18N-03] | Literal Turkish text in JSX (warning) |
-| [STA-03] | `createAsyncThunk` (server state in Redux) |
+| [STA-28] | `createAsyncThunk` performing HTTP (server state belongs to TanStack Query) |
 
 ### D. Docker and compose
 [VER-02], [VER-04], [OPS-02] (a Node static server in the runtime image), [OPS-03]
@@ -138,6 +142,34 @@ Presence of the locale directory and at least two locales. Key parity itself is
 
 ---
 
+## What `check-refs.mjs` checks
+
+This one is aimed at the standard, not at an application. Twenty-five documents written
+and revised separately will grow dangling cross references: a rule gets renumbered, a file
+gets renamed, an ADR is cited before it is written. Left alone, the reader follows a
+reference to a rule that does not exist and loses trust in the whole set.
+
+| Check | Severity |
+|---|---|
+| A rule id defined more than once | error |
+| A rule id referenced but never defined | error |
+| A placeholder id (`[MAP-xx]`, `[SEC-NN]`) left in the text | error |
+| A relative markdown link whose target file does not exist | error |
+| One prefix defined across several files | warning |
+| Gaps in a prefix's numbering, or numbering that does not start at 01 | warning |
+| A prefix used but missing from the table in `00-README.md` | warning |
+
+It reads `.md` files plus `tools/*.sh` and `tools/*.mjs`, so a rule id cited in a tool
+message is checked too. `fixtures/` is skipped. A definition is a line beginning with
+`**[XXX-NN]` followed by `MUST`, `MUST NOT` or `SHOULD`; anything else that looks like an
+id counts as a reference. Tokens such as `[ADR-0001]`, `[RFC-7946]` and `[EPSG-4326]` are
+excluded by name, so widen that list deliberately if a new one appears.
+
+Run it after editing any document in the standard, and in the release check before
+publishing a new version of the plugin.
+
+---
+
 ## Verification: these tools were tested
 
 Both directions were measured on 2026-09-07.
@@ -149,13 +181,29 @@ Both directions were measured on 2026-09-07.
 | **False positives on the compliant fixture** (`fixtures/compliant-app`) | **0 errors, 0 warnings** |
 | Exit codes | violating repo → `1`, fixture → `0` |
 
-Two defects were found and fixed during that test:
+`check-refs.mjs` on the standard itself: **56 documents, 806 rules, 23 prefixes,
+0 errors, 0 warnings.**
 
-- `new (maplibregl\.)?Map\(` also matched JavaScript's native `new Map()`, producing 106
-  findings of which 82 were false. The pattern now requires an explicit `maplibregl.`,
-  `maplibre.` or `mapboxgl.` namespace: 24 findings, all real.
-- The [GEN-10] check printed the matched line verbatim, which put a real MQTT password
-  from `.env.prod` into the report. Values are now masked.
+Five defects were found and fixed by running these tools rather than by reading them:
+
+- `check-standards.sh`: the marker pattern `new (maplibregl\.)?Map\(` also matched
+  JavaScript's native `new Map()`, producing 106 findings of which 82 were false. The
+  pattern now requires an explicit `maplibregl.`, `maplibre.` or `mapboxgl.` namespace:
+  24 findings, all real.
+- `check-standards.sh`: the [GEN-10] check printed the matched line verbatim, which put a
+  real MQTT password from a production env file into the report. Values are now masked. An
+  audit must never publish the secret it found.
+- `check-standards.sh`: server-level nginx checks were applied to include fragments such as
+  `security-headers.conf`, reporting four false errors on a correct config. They now run
+  only on files that define a `server {` block.
+- `check-standards.sh`: `node -e "require(process.argv[1])"` rejects a bare relative path,
+  so `bash tools/check-standards.sh tools/fixtures/compliant-app` produced five false
+  errors while the same run with an absolute path was clean. It now reads and parses the
+  file instead of requiring it.
+- `check-refs.mjs`: rule ids and placeholders shown as examples inside code blocks were
+  reported as dangling references. Fenced blocks and inline code spans are now blanked
+  before scanning, and `templates/` is exempt from link checking because its relative links
+  resolve in the repository it is copied into, not here.
 
 Reproduce the false-positive test with:
 

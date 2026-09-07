@@ -207,7 +207,7 @@ Directive by directive, and what breaks if you loosen or tighten it:
 | `script-src` | `'self'` | Bundle only. No `'unsafe-inline'`, no `'unsafe-eval'`, no CDN ([SEC-14]). Any inline `<script>` in `index.html` is blocked; the reference repo's inline context-menu script moves into `main.tsx`. |
 | `style-src` | `'self' 'unsafe-inline'` | Accepted, see below. |
 | `img-src` | `'self' data: blob:` | Vite inlines assets under `build.assetsInlineLimit` (4 KB) as `data:` URIs; file previews use `URL.createObjectURL` (`blob:`); raster tiles and sprites come through the proxy (`'self'`). |
-| `font-src` | `'self'` | Fonts are self-hosted under `public/fonts/` ([PERF-xx]). Google Fonts is a third-party origin and is forbidden ([SEC-14]). |
+| `font-src` | `'self'` | Fonts are self-hosted under `public/fonts/` ([PERF-19]). Google Fonts is a third-party origin and is forbidden ([SEC-14]). |
 | `connect-src` | `'self' wss://<host>` | `fetch`, XHR, EventSource, WebSocket. `'self'` covers `wss:` on the same host in CSP3 but Safari has been inconsistent, so the host is listed explicitly. Never a bare `wss:` scheme. |
 | `worker-src` | `'self' blob:` | MapLibre spawns its worker from a `blob:` URL created from the bundled worker code. Without `blob:` the map is blank with a console error. |
 | `frame-src` | `'none'` | Raised to a specific origin only when [SEC-14]'s iframe exception applies. |
@@ -276,7 +276,7 @@ add_header Cross-Origin-Opener-Policy "same-origin" always;
   is appended to the CSP.
 - `Cross-Origin-Opener-Policy: same-origin` severs `window.opener` for pages this app opens
   and pages that open it. It breaks popup-based OIDC flows; the standard uses redirect flows
-  ([AUTH-22]), so it is safe. Downgrade to `same-origin-allow-popups` with a written reason if
+  ([AUTH-24]), so it is safe. Downgrade to `same-origin-allow-popups` with a written reason if
   a popup flow is unavoidable.
 - `X-XSS-Protection` is not set. It is removed from modern browsers and introduced
   vulnerabilities in old ones.
@@ -314,7 +314,7 @@ there anyway:
 
 | Seen in the wild | Why it is a leak | The fix |
 |---|---|---|
-| `VITE_MQTT_USERNAME` / `VITE_MQTT_PASSWORD` | Anyone can publish to every topic the broker allows that user | Backend endpoint issues a short-lived, topic-scoped token ([SEC-19], [RT-xx]) |
+| `VITE_MQTT_USERNAME` / `VITE_MQTT_PASSWORD` | Anyone can publish to every topic the broker allows that user | Backend endpoint issues a short-lived, topic-scoped token ([SEC-19], [RT-02]) |
 | A map/geocoding API key with billing | Key is copied and your invoice grows | nginx proxies `/geocode/` and injects the key: `proxy_set_header Authorization "Bearer ${GEOCODER_KEY}"` from the container env; the browser never sees it |
 | Superset / BI guest credentials | Full read of the warehouse | Backend mints a Superset guest token per user with row-level filters; the SPA passes only that |
 | A "service" JWT for the tile server | Tiles for every tenant, forever | Tiles go through nginx on the same origin with the session cookie ([GEN-22]); the tile server validates it or nginx does `auth_request` |
@@ -331,7 +331,7 @@ per-tenant data, never anything derived from a request.
 > **Why:** `no-store` (stricter than the `no-cache` floor of [GEN-12]) keeps a rotated URL or a
 > flipped feature flag from surviving in a shared proxy cache. Per-user data in `config.js`
 > would make it cacheable by user, which is a leak waiting for a misconfigured cache.
-> Producing side: [11](11-DOCKER-COMPOSE.md) §3; header: [NGX-xx].
+> Producing side: [11](11-DOCKER-COMPOSE.md) §3; header: [NGX-05].
 
 ---
 
@@ -465,7 +465,7 @@ topics the user may read), never with a static username/password from config. Re
 fetch a fresh credential.
 > **Why:** The broker cannot read the session cookie's meaning, so a bearer credential is
 > unavoidable there; the fix is to make it short, scoped and per user. A static broker
-> password in `config.js` is a published string ([SEC-12]). Lifecycle: [RT-xx].
+> password in `config.js` is a published string ([SEC-12]). Lifecycle: [RT-02], [RT-04].
 
 ---
 
@@ -490,7 +490,7 @@ fund=false
 **[SEC-21] MUST:** Third-party GitHub Actions (or the equivalent in another CI) are pinned to
 a full commit SHA with the version as a trailing comment, never to a mutable tag.
 > **Why:** A tag can be moved to a malicious commit by whoever controls the action's repo
-> (tj-actions/changed-files, March 2025). The SHA cannot. Pipeline detail: [14](14-GIT-CI.md) [CI-xx].
+> (tj-actions/changed-files, March 2025). The SHA cannot. Pipeline detail: [14](14-GIT-CI.md) §2.
 
 ```yaml
 - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
@@ -503,7 +503,7 @@ a full commit SHA with the version as a trailing comment, never to a mutable tag
 
 **[SEC-22] MUST:** Source maps are generated with `build.sourcemap: 'hidden'`, uploaded to
 the error tracker in the build stage with the release id ([OBS-05]), then deleted before the
-runtime image is assembled. nginx additionally returns 404 for `*.map` ([NGX-xx]) as a
+runtime image is assembled. nginx additionally returns 404 for `*.map` ([NGX-13]) as a
 second layer.
 > **Why:** `'hidden'` omits the `//# sourceMappingURL` comment so browsers do not fetch maps,
 > but the files still exist in `dist/`. Serving them publishes the unminified source, including
@@ -549,7 +549,7 @@ additionally strips any `console`/`debugger` that slip through.
 
 **[SEC-24] MUST NOT:** Show a user any stack trace, internal hostname, upstream error body,
 SQL fragment or request URL in an error message. Users see an i18n message plus the request id
-from [API-xx] so support can find the server log.
+from [API-07] so support can find the server log.
 > **Why:** `ECONNREFUSED 172.22.1.16:8889` in a toast is a network map for an attacker and
 > noise for a citizen. The request id gives support everything the stack trace would, from the
 > server side, where it belongs. Error UI rules: [17](17-ERRORS-OBSERVABILITY.md) §2.
@@ -561,7 +561,7 @@ messages and breadcrumbs. The logger applies the same scrubber. Users are identi
 opaque id, never by name or e-mail.
 > **Why:** A form validation error breadcrumb that contains the typed TCKN is personal data
 > in a third-party (or at least another) system, with retention you do not control. KVKK
-> treats that as processing without a basis. Tracker setup: [OBS-xx].
+> treats that as processing without a basis. Tracker setup: [OBS-11], [OBS-12].
 
 ```ts
 // src/shared/lib/scrubPii.ts

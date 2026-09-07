@@ -1,0 +1,98 @@
+# =============================================================================
+# deployments/main/docker-compose.dev.yml — LOCAL development.
+#
+#   docker compose -f deployments/main/docker-compose.dev.yml \
+#                  --env-file deployments/main/.env.local up
+#
+#   open http://localhost:${NGINX_PORT}      (through the real nginx)
+#
+# Two services:
+#   vite  — the Vite dev server with HMR, source bind-mounted from the host.
+#   edge  — the REAL nginx, with the REAL nginx.conf and security-headers.conf,
+#           in front of it ([NGX-47]). This is what makes a proxy prefix bug
+#           show up on a laptop instead of in production.
+#
+# This file is for LOCAL use only. It has no `build:` for a production image,
+# no restart policy and no resource limits on purpose: if you want to test the
+# production image, build and run docker-compose.yml, which is the point of
+# having one image for all environments ([GEN-09]).
+#
+# Running the dev server WITHOUT Docker (`npm run dev`, Vite's own proxy) is
+# also supported and is faster on Windows; see 11-DOCKER-COMPOSE.md §7. The
+# path prefixes are identical either way, so application code never changes.
+# =============================================================================
+
+services:
+  vite:
+    image: node:24-alpine
+    container_name: ${COMPOSE_PROJECT_NAME}-vite
+    working_dir: /app
+    # `npm ci` on start keeps the container's node_modules in step with the
+    # lockfile without rebuilding an image. It is a no-op when nothing changed.
+    command: sh -c "npm ci && npm run dev -- --host 0.0.0.0 --port 5173"
+    environment:
+      # Docker Desktop on Windows and macOS delivers no inotify events for
+      # files on a bind mount from the host filesystem. Without polling, saving
+      # a file changes nothing on screen and looks like a broken HMR setup.
+      # Polling costs CPU, so it is opt-in through this variable and read by
+      # vite.config.ts (server.watch.usePolling), not forced in the config.
+      VITE_WATCH_POLLING: "1"
+      # Browser-side HMR socket port. The browser connects to the EDGE
+      # (${NGINX_PORT}), not to 5173, so the client must be told which port to
+      # use or it tries 5173 and fails.
+      VITE_HMR_CLIENT_PORT: ${NGINX_PORT}
+      DEV_API_TARGET: ${DEV_API_TARGET}
+      DEV_TILE_TARGET: ${DEV_TILE_TARGET}
+      DEV_MAP_TARGET: ${DEV_MAP_TARGET}
+    volumes:
+      # Source from the host, so edits are picked up.
+      - ../../:/app
+      # Anonymous volume shadowing the host node_modules: the host tree is
+      # built for win32/darwin and its native bindings (esbuild, rolldown)
+      # crash instantly inside alpine.
+      - /app/node_modules
+    expose:
+      - "5173"
+    networks:
+      - devnet
+
+  edge:
+    image: nginxinc/nginx-unprivileged:1.30-alpine
+    container_name: ${COMPOSE_PROJECT_NAME}-edge
+    ports:
+      - "${NGINX_PORT}:8080"
+    environment:
+      NGINX_ENVSUBST_OUTPUT_DIR: /tmp/nginx
+      NGINX_ENVSUBST_FILTER: '^(NGINX|APP)_'
+      NGINX_UPSTREAM_VITE: vite:5173
+      NGINX_UPSTREAM_API: ${NGINX_UPSTREAM_API}
+      NGINX_UPSTREAM_TILES: ${NGINX_UPSTREAM_TILES}
+      NGINX_UPSTREAM_MAP: ${NGINX_UPSTREAM_MAP}
+      NGINX_UPSTREAM_MQTT: ${NGINX_UPSTREAM_MQTT}
+      NGINX_UPSTREAM_MEDIA: ${NGINX_UPSTREAM_MEDIA}
+    volumes:
+      # Byte-identical to production. If a change here breaks nginx, it breaks
+      # locally first.
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/security-headers.conf:/etc/nginx/snippets/security-headers.conf:ro
+      # The dev server block replaces the production template at the same path,
+      # so only one server{} is rendered.
+      - ./nginx/dev.conf.template:/etc/nginx/templates/default.conf.template:ro
+    tmpfs:
+      # Must exist before the entrypoint renders into it, exactly as in
+      # production. Keeping the mechanism identical is the point of this file.
+      - /tmp/nginx:mode=1777,size=4m
+    extra_hosts:
+      # Lets an upstream be a service running directly on the developer's
+      # machine: NGINX_UPSTREAM_API=host.docker.internal:7000
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      - vite
+    networks:
+      - devnet
+
+networks:
+  devnet:
+    # A project-local network, unlike production's external shared network:
+    # a dev stack must not be able to reach a colleague's containers by name.
+    driver: bridge

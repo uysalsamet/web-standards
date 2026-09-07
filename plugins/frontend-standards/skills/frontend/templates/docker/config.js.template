@@ -1,0 +1,28 @@
+// =============================================================================
+// config.js.template -> /config.js, rendered at container start by
+// /docker-entrypoint.d/20-render-config.sh ([GEN-09], [OPS-07]).
+//
+// This is the ONLY place environment-specific values enter the app. The image
+// is identical in every environment; only the env file differs.
+//
+// Read by src/app/config/runtimeConfig.ts, which parses it with a zod schema
+// and throws on a missing field ([STR-20]).
+//
+// Everything here is PUBLIC. Anyone can open DevTools and read it. A value
+// that must stay private is proxied through the backend instead ([GEN-10]).
+//
+// APP_FEATURES_JSON is injected WITHOUT quotes because it is already JSON.
+// Every other value is quoted, so a stray character cannot break out of the
+// string literal.
+// =============================================================================
+window.__APP_CONFIG__ = {
+  apiBaseUrl: "${APP_API_BASE_URL}",
+  tileBaseUrl: "${APP_TILE_BASE_URL}",
+  mapStyleUrl: "${APP_MAP_STYLE_URL}",
+  mqttWsUrl: "${APP_MQTT_WS_URL}",
+  environment: "${APP_ENVIRONMENT}",
+  release: "${APP_RELEASE}",
+  siteUrl: "${APP_SITE_URL}",
+  features: ${APP_FEATURES_JSON},
+};
+Object.freeze(window.__APP_CONFIG__);

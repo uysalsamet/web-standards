@@ -40,41 +40,34 @@ in CI. They are ceilings, not targets.
 > there, which is what leaves room for LCP ≤ 2.5 s (§6). The map chunk is separated because
 > it is the largest single dependency and is only needed on map routes. Detail: [ADR-0001](adr/0001-build-tool.md).
 
-**[PERF-03] MUST:** CI runs a `check-bundle-size` step after `vite build` that reads
-`dist/`, gzips every emitted asset, groups it by the table above, and fails the job when
-any budget is exceeded. Budgets live in `bundle-budget.json` at the repo root; raising a
-budget is a reviewed change to that file with a reason in the PR. Cross-ref: [CI-06].
+**[PERF-03] MUST:** CI runs `tools/check-bundle-size.mjs` after `vite build`. It reads
+`dist/`, gzips every emitted asset, classifies each one as an entry asset (referenced from
+`index.html`) or a route chunk, compares it against `budget.json` at the repo root, and
+fails the job when any budget is exceeded. Raising a budget is a reviewed change to that
+file with a reason in the PR. Cross-ref: [CI-06], [TOOL-01].
 
-```js
-// scripts/check-bundle-size.mjs  (run: node scripts/check-bundle-size.mjs)
-import { readdirSync, readFileSync, statSync } from 'node:fs'
-import { join } from 'node:path'
-import { gzipSync } from 'node:zlib'
-
-const budget = JSON.parse(readFileSync('bundle-budget.json', 'utf8')) // { shellKb, maplibreKb, routeKb, totalKb, cssKb }
-const dir = 'dist/assets'
-const gz = (f) => gzipSync(readFileSync(join(dir, f))).length / 1024
-
-const files = readdirSync(dir).filter((f) => statSync(join(dir, f)).isFile())
-const js = files.filter((f) => f.endsWith('.js'))
-const css = files.filter((f) => f.endsWith('.css'))
-
-// Naming contract: entry is index-*.js, vendor groups are named in vite.config.ts (§2).
-const shell = js.filter((f) => /^(index|react-vendor|shared)-/.test(f)).reduce((s, f) => s + gz(f), 0)
-const maplibre = js.filter((f) => /^maplibre-/.test(f)).reduce((s, f) => s + gz(f), 0)
-const routes = js.filter((f) => !/^(index|react-vendor|shared|maplibre)-/.test(f)).map((f) => [f, gz(f)])
-const total = js.reduce((s, f) => s + gz(f), 0)
-
-const failures = []
-if (shell > budget.shellKb) failures.push(`app shell ${shell.toFixed(0)} KB > ${budget.shellKb} KB`)
-if (maplibre > budget.maplibreKb) failures.push(`maplibre ${maplibre.toFixed(0)} KB > ${budget.maplibreKb} KB`)
-for (const [f, kb] of routes) if (kb > budget.routeKb) failures.push(`${f} ${kb.toFixed(0)} KB > ${budget.routeKb} KB`)
-for (const f of css) if (gz(f) > budget.cssKb) failures.push(`${f} css > ${budget.cssKb} KB`)
-if (total > budget.totalKb) failures.push(`total ${total.toFixed(0)} KB > ${budget.totalKb} KB`)
-
-console.log(`shell ${shell.toFixed(0)} KB, maplibre ${maplibre.toFixed(0)} KB, total ${total.toFixed(0)} KB (gzip)`)
-if (failures.length) { console.error(failures.join('\n')); process.exit(1) }
+```bash
+npm run build
+node frontend-standards/tools/check-bundle-size.mjs dist budget.json
 ```
+
+```jsonc
+// budget.json at the repo root. Bytes, not kilobytes, so there is no rounding argument.
+{
+  "initial": 262144,        // sum of entry assets, 256 KB gz
+  "chunk": 153600,          // any single route chunk, 150 KB gz
+  "total": 1572864,         // every emitted asset, 1.5 MB gz
+  "entries": {              // per-chunk overrides, matched by longest name prefix
+    "react-vendor": 61440,  // 60 KB gz
+    "maplibre": 262144      // 256 KB gz, the exception the table above allows
+  }
+}
+```
+
+`tools/budget.example.json` is the starting point; copy it and adjust to your app. The
+script prints an aligned table of every asset with its gzipped size and its budget, and on
+failure names each breach with the amount it went over. See
+[tools/README.md](tools/README.md).
 
 The script gzips because nginx serves the precompressed `.gz`/`.br` files ([PERF-10]) and
 users pay for the compressed bytes. Brotli is 10 to 15 % smaller still; gzip is the budget
@@ -671,7 +664,7 @@ part of the CI build.
   "scripts": {
     "build": "tsc -b && vite build",
     "analyze": "ANALYZE=1 vite build && open dist/stats.html",   // Windows: use start
-    "check:bundle": "node scripts/check-bundle-size.mjs"
+    "size:check": "node frontend-standards/tools/check-bundle-size.mjs dist budget.json"
   }
 }
 ```
