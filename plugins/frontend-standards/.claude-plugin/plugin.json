@@ -1,7 +1,7 @@
 {
   "name": "frontend-standards",
   "displayName": "Frontend Standards",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Binding frontend engineering standard for React + Vite + TypeScript apps shipped as Docker images behind nginx: 806 rules across 27 documents, 21 decision records, 5 audit tools and copyable Docker/nginx/CI templates. Skill: /frontend-standards:frontend",
   "author": {
     "name": "Samet Yasin Uysal"

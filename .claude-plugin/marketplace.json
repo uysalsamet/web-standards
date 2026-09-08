@@ -13,7 +13,7 @@
       "name": "frontend-standards",
       "source": "./plugins/frontend-standards",
       "description": "Frontend engineering standard: React 19 + Vite 8 + TypeScript, feature-based structure, TanStack Query, MapLibre GPU rendering rules, i18n key parity, SEO without stale builds, Docker + nginx templates, CI gates. 806 rules in 27 documents, 21 decision records, 5 audit tools.",
-      "version": "1.1.0",
+      "version": "1.2.0",
       "category": "engineering-standards",
       "keywords": ["react", "vite", "typescript", "nginx", "docker", "maplibre", "i18n", "seo", "standards"],
       "license": "MIT"
