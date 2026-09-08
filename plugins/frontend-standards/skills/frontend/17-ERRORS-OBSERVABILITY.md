@@ -821,7 +821,7 @@ export function isDebugEnabled(environment: string): boolean {
 ```
 
 The map's own instrumentation (frame timing during pan, long-task attribution to layer
-operations) is specified in [08](08-MAP-MAPLIBRE.md) §9 and renders into this overlay.
+operations) is specified in [08](08-MAP-MAPLIBRE.md) and renders into this overlay.
 
 Alerting on error volume, vitals regressions and health-check failures is an
 operations concern: the tracker's alert rules and the uptime monitor are configured per

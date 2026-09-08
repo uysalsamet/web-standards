@@ -124,7 +124,7 @@ feature properties.
 > **Why:** `popup.setHTML(\`<b>${props.name}</b>\`)` is `innerHTML` with a nicer name. Feature
 > properties come from GeoJSON and tiles, which come from imports, other systems and users.
 > MapLibre *expressions* (`['get', 'name']` in `text-field`) are safe: they render glyphs on
-> the GPU, never HTML. The popup is the only HTML path on the map. Detail: [08](08-MAP-MAPLIBRE.md) §6.
+> the GPU, never HTML. The popup is the only HTML path on the map. Detail: [08](08-MAP-MAPLIBRE.md).
 
 ```tsx
 // WRONG

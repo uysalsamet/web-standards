@@ -32,7 +32,9 @@
 | 05 | [05-STATE-AND-DATA.md](05-STATE-AND-DATA.md) | Server state (TanStack Query), client state (RTK), URL state, caching, invalidation |
 | 06 | [06-SECURITY.md](06-SECURITY.md) | XSS, CSP, token handling, uploads, iframes, third-party code, supply chain |
 | 07 | [07-PERFORMANCE.md](07-PERFORMANCE.md) | Bundle budgets, code splitting, rendering cost, images/fonts, Web Vitals, React Compiler |
-| 08 | [08-MAP-MAPLIBRE.md](08-MAP-MAPLIBRE.md) | Map instance, sources/layers, GPU markers vs DOM, clustering, tiles, events, popups, cleanup, terrain |
+| 08 | [08-MAP-MAPLIBRE.md](08-MAP-MAPLIBRE.md) | **Map core:** instance ownership, layers vs DOM markers, events, popups, lifecycle and cleanup |
+| 08b | [08b-MAP-DATA.md](08b-MAP-DATA.md) | Map data: GeoJSON limits, vector tiles, terrain and raster, live datasets, map performance |
+| 08c | [08c-MAP-TOOLING.md](08c-MAP-TOOLING.md) | Map drawing and editing, testing map code |
 | 09 | [09-I18N.md](09-I18N.md) | Locale files with identical keys, typed keys, no literal strings, Intl formatting, Turkish casing |
 | 10 | [10-SEO-RENDERING.md](10-SEO-RENDERING.md) | SEO tiers, prerender vs SSR vs request-time meta injection, the stale-build problem, sitemap, 404 |
 | 11 | [11-DOCKER-COMPOSE.md](11-DOCKER-COMPOSE.md) | Multi-stage image, runtime config, env layering, dev vs prod compose, health, logging |

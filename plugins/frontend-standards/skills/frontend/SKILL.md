@@ -34,7 +34,9 @@ task needs; the index below and `RULE-MAP.md` tell you which.
 | 05 | [05-STATE-AND-DATA.md](05-STATE-AND-DATA.md) | Any state: server, client, URL, form; caching, invalidation |
 | 06 | [06-SECURITY.md](06-SECURITY.md) | HTML injection, tokens, CSP, uploads, third-party scripts |
 | 07 | [07-PERFORMANCE.md](07-PERFORMANCE.md) | Bundle size, lazy loading, rendering, Web Vitals |
-| 08 | [08-MAP-MAPLIBRE.md](08-MAP-MAPLIBRE.md) | Anything that touches the map: layers, markers, tiles, events, popups |
+| 08 | [08-MAP-MAPLIBRE.md](08-MAP-MAPLIBRE.md) | **Putting something on the map:** instance, layers vs markers, events, popups, cleanup |
+| 08b | [08b-MAP-DATA.md](08b-MAP-DATA.md) | Where map data comes from: GeoJSON limits, tiles, terrain, live data, map performance |
+| 08c | [08c-MAP-TOOLING.md](08c-MAP-TOOLING.md) | Drawing and editing geometry; testing map code |
 | 09 | [09-I18N.md](09-I18N.md) | Any user-visible text, dates, numbers, Turkish casing/sorting |
 | 10 | [10-SEO-RENDERING.md](10-SEO-RENDERING.md) | Public pages, meta tags, prerender/SSR, sitemap, stale-build risk |
 | 11 | [11-DOCKER-COMPOSE.md](11-DOCKER-COMPOSE.md) | Dockerfile, compose, env files, runtime config, local vs prod |

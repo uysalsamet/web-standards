@@ -5,7 +5,7 @@
 > A budget in CI, a Web Vital at p75, a before/after measurement in the PR. Read this file
 > when touching `vite.config.ts`, adding a dependency, rendering a list, a chart, an image
 > or a font, or when anything "feels slow". Map rendering cost (layers, tiles, markers,
-> `feature-state`) is owned by [08](08-MAP-MAPLIBRE.md) §9 and only cross-referenced here.
+> `feature-state`) is owned by [08](08-MAP-MAPLIBRE.md) and only cross-referenced here.
 
 ---
 
@@ -455,7 +455,7 @@ image above 4 KB is inlined as base64 (`assetsInlineLimit: 4096` in [PERF-09]).
 ```
 
 Icons are `lucide-react` named imports (SVG, tree-shaken) or inline SVG components, never
-icon fonts and never an `<img>` per icon. The map sprite is owned by [08](08-MAP-MAPLIBRE.md) §5.
+icon fonts and never an `<img>` per icon. The map sprite is owned by [08](08-MAP-MAPLIBRE.md).
 
 ---
 
@@ -647,7 +647,7 @@ function pushSample(s: Sample) {
 ```
 
 Map-specific leaks (sources, layers, images, popups) are covered by [GEN-20] and
-[08](08-MAP-MAPLIBRE.md) §7.
+[08](08-MAP-MAPLIBRE.md).
 
 ---
 
@@ -689,7 +689,7 @@ Tools and what each answers:
 | Which element is LCP? | Performance panel → Insights, or `web-vitals/attribution` | `onLCP(({ attribution }) => attribution.element)` |
 | Is this chunk lazy? | Network panel | Filter JS; the chunk must appear only after the triggering interaction |
 | Are the compressed files served? | `curl -I -H 'Accept-Encoding: br'` | `content-encoding: br`, `cache-control: immutable` |
-| Did the map drop frames? | [08](08-MAP-MAPLIBRE.md) §9 instrumentation | `?debug=1` overlay ([OBS-19]) shows FPS during pan |
+| Did the map drop frames? | [08](08-MAP-MAPLIBRE.md) instrumentation | `?debug=1` overlay ([OBS-19]) shows FPS during pan |
 
 ### Performance review checklist (for PRs that touch the areas above)
 

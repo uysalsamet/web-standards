@@ -46,18 +46,27 @@ apply.
 
 ### Map
 
+The map rules live in three files. **08 is the one you need to put something on the map**;
+the other two are only read when the task is about them.
+
 | Signal | Rules | File |
 |---|---|---|
-| `new maplibregl.Map(` | [MAP-01] | [08](08-MAP-MAPLIBRE.md) |
+| `new maplibregl.Map(` | [MAP-01], [MAP-02] | [08](08-MAP-MAPLIBRE.md) |
 | `new maplibregl.Marker(` | [GEN-18], [MAP-11] | [08](08-MAP-MAPLIBRE.md) |
-| `addSource` / `addLayer` | [MAP-06], [MAP-19], [MAP-20] | [08](08-MAP-MAPLIBRE.md) |
+| `addSource` / `addLayer` | [MAP-06], [MAP-12] | [08](08-MAP-MAPLIBRE.md) |
 | Hover or selection styling | [MAP-17], [MAP-18] (never `setData`) | [08](08-MAP-MAPLIBRE.md) |
-| A `.geojson` file, or any dataset over 2 MB | [GEN-19], [MAP-19], [GIS-01] | [08](08-MAP-MAPLIBRE.md), [GIS](APPENDIX-GIS-DATA.md) |
-| A tile URL, `source-layer`, MVT | [MAP-22], [MAP-23] | [08](08-MAP-MAPLIBRE.md) |
-| A map popup with HTML | [SEC-01], [SEC-03] | [06](06-SECURITY.md) |
-| A map event handler | [MAP-25] (`queryRenderedFeatures` with a layer filter) | [08](08-MAP-MAPLIBRE.md) |
-| Anything added to the map in an effect | [GEN-20], [GEN-21] | [08](08-MAP-MAPLIBRE.md) |
-| A bbox sent to an API | [MAP-25], [GIS-16] | [GIS](APPENDIX-GIS-DATA.md) |
+| A map click or `mousemove` handler | [MAP-29], [MAP-30], [MAP-31] | [08](08-MAP-MAPLIBRE.md) |
+| A map popup | [MAP-34], [SEC-01], [SEC-03] | [08](08-MAP-MAPLIBRE.md), [06](06-SECURITY.md) |
+| Anything added to the map in an effect | [GEN-20], [GEN-21], [MAP-38] | [08](08-MAP-MAPLIBRE.md) |
+| A style switch (light / dark / satellite) | [MAP-07], [MAP-08] | [08](08-MAP-MAPLIBRE.md) |
+| A `.geojson` file, or any dataset over 2 MB | [GEN-19], [MAP-19], [MAP-20] | [08b](08b-MAP-DATA.md), [GIS](APPENDIX-GIS-DATA.md) |
+| A tile URL, `source-layer`, MVT, PMTiles | [MAP-22], [MAP-23], [MAP-27] | [08b](08b-MAP-DATA.md) |
+| `moveend` that fetches by bbox | [MAP-25], [GIS-16] | [08b](08b-MAP-DATA.md) |
+| Terrain, hillshade, satellite raster | [MAP-41], [MAP-42] | [08b](08b-MAP-DATA.md) |
+| Live positions on the map (vehicles) | [MAP-63], [RT-06], [RT-10] | [08b](08b-MAP-DATA.md), [20](20-REALTIME-MEDIA.md) |
+| The map feels slow | The performance section of [08b](08b-MAP-DATA.md) | [08b](08b-MAP-DATA.md) |
+| Letting the user draw or edit geometry | The drawing rules in [08c](08c-MAP-TOOLING.md) | [08c](08c-MAP-TOOLING.md) |
+| Writing a test that touches the map | [TEST-14], [TEST-15] | [08c](08c-MAP-TOOLING.md), [13](13-TESTING.md) |
 
 ### Text the user can see
 
@@ -170,12 +179,12 @@ Read `01-GOLDEN-RULES.md` first, always. Then:
 |---|---|---|
 | Starting a new app | [02](02-TECH-VERSIONS.md), [03](03-PROJECT-STRUCTURE.md), [11](11-DOCKER-COMPOSE.md), [12](12-NGINX.md), [15](15-NEW-FEATURE-CHECKLIST.md) | [14](14-GIT-CI.md), [START.md](START.md) |
 | Adding a feature | [03](03-PROJECT-STRUCTURE.md) §2, [04](04-API-CLIENT.md), [05](05-STATE-AND-DATA.md), [15](15-NEW-FEATURE-CHECKLIST.md) | [09](09-I18N.md), [16](16-ACCESSIBILITY-UX.md) |
-| Map work | [08](08-MAP-MAPLIBRE.md), [APPENDIX-GIS-DATA.md](APPENDIX-GIS-DATA.md) | [07](07-PERFORMANCE.md) §5, [16](16-ACCESSIBILITY-UX.md) §6 |
+| Map work | [08](08-MAP-MAPLIBRE.md); data or tiles also [08b](08b-MAP-DATA.md); drawing or tests also [08c](08c-MAP-TOOLING.md) | [07](07-PERFORMANCE.md) §5, [16](16-ACCESSIBILITY-UX.md) §6 |
 | A form | [18](18-FORMS-VALIDATION.md), [04](04-API-CLIENT.md) §5 | [09](09-I18N.md), [16](16-ACCESSIBILITY-UX.md) |
 | Login, permissions, sessions | [19](19-AUTH-SESSION.md), [06](06-SECURITY.md) §4 | [22](22-ROUTING.md) §6 |
 | A public, indexable page | [10](10-SEO-RENDERING.md), [12](12-NGINX.md) | [09](09-I18N.md), [07](07-PERFORMANCE.md) |
 | Adding text, a new language | [09](09-I18N.md) | [16](16-ACCESSIBILITY-UX.md) |
-| Something is slow | [07](07-PERFORMANCE.md) | [08](08-MAP-MAPLIBRE.md) §11, [05](05-STATE-AND-DATA.md) |
+| Something is slow | [07](07-PERFORMANCE.md) | [08](08-MAP-MAPLIBRE.md), [05](05-STATE-AND-DATA.md) |
 | Something is broken in production | [17](17-ERRORS-OBSERVABILITY.md) | [12](12-NGINX.md) §12, [11](11-DOCKER-COMPOSE.md) §9 |
 | Docker, nginx, deploy | [11](11-DOCKER-COMPOSE.md), [12](12-NGINX.md) | [06](06-SECURITY.md) §3, [14](14-GIT-CI.md) |
 | Live data, video | [20](20-REALTIME-MEDIA.md) | [05](05-STATE-AND-DATA.md), [07](07-PERFORMANCE.md) |
@@ -197,7 +206,7 @@ Read `01-GOLDEN-RULES.md` first, always. Then:
 | STA | [05](05-STATE-AND-DATA.md) | TEST | [13](13-TESTING.md) |
 | SEC | [06](06-SECURITY.md) | CI | [14](14-GIT-CI.md) |
 | PERF | [07](07-PERFORMANCE.md) | A11Y | [16](16-ACCESSIBILITY-UX.md) |
-| MAP | [08](08-MAP-MAPLIBRE.md) | OBS | [17](17-ERRORS-OBSERVABILITY.md) |
+| MAP | [08](08-MAP-MAPLIBRE.md), [08b](08b-MAP-DATA.md), [08c](08c-MAP-TOOLING.md) | OBS | [17](17-ERRORS-OBSERVABILITY.md) |
 | FORM | [18](18-FORMS-VALIDATION.md) | AUTH | [19](19-AUTH-SESSION.md) |
 | RT | [20](20-REALTIME-MEDIA.md) | TS | [21](21-TYPESCRIPT-REACT-STYLE.md) |
 | RTE | [22](22-ROUTING.md) | GIS | [APPENDIX-GIS-DATA.md](APPENDIX-GIS-DATA.md) |
@@ -226,6 +235,9 @@ comment. Do not pretend a rule exists.
 | Mobile applications | React Native is out of scope entirely | A native product. It would be a separate standard, not a section here |
 | Feature-local locale files | [STR-05] allows a feature `locales/` folder but the build-time merge step does not exist in `tools/` | Someone writing the merge script; until then all keys live in the shared locale files |
 | Backend SEO contract | The injector's `GET /seo/meta` shape is defined only by the frontend's schema | The backend standard adopting it as a published contract |
+| Cookie consent and analytics | A public municipal site in Turkey needs a KVKK consent banner before any non-essential cookie or tracker fires. The standard has **no rule** for consent state, for gating analytics on it, or for what "essential" means | The first public (Tier 1 or 2) product. It needs a rule set of its own and probably a legal review, not an invented one |
+| Feature flags | `03` §5 puts a `features` map in the runtime config, but no rule says how a flag is named, who removes a dead flag, or that a flag must never gate a security check | The second product that ships a flag, or the first flag that outlives its feature |
+| Maintenance mode | Nothing covers what a user sees during a deploy or a backend outage: no 503 page, no "planned maintenance" state, no rule that the SPA must degrade rather than white-screen | The first planned outage with real users. Until then the answer is whatever nginx returns |
 
 ---
 

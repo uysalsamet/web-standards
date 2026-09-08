@@ -7,7 +7,7 @@
 > Read this file for any task containing `mqtt`, `WebSocket`, `EventSource`, `hls`, `WHEP`,
 > `Worker`, or "live".
 >
-> Out of scope: what the map does with live positions ([08](08-MAP-MAPLIBRE.md) §12), which
+> Out of scope: what the map does with live positions ([08](08-MAP-MAPLIBRE.md)), which
 > store holds the data ([05](05-STATE-AND-DATA.md) §2.5, §3), the broker credential's
 > security model ([06](06-SECURITY.md) §6), and the nginx `/mqtt` proxy block
 > ([12](12-NGINX.md) §5).

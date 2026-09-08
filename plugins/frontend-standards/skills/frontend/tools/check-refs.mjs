@@ -122,9 +122,13 @@ for (const [id, places] of defs) {
 
 // --- 3. One prefix should live in one file -----------------------------------
 for (const [prefix, fileSet] of prefixFiles) {
-  if (fileSet.size > 1) {
-    warn(prefix, `prefix defined across ${fileSet.size} files: ${[...fileSet].join(', ')}`)
-  }
+  if (fileSet.size === 1) continue
+  // A document may be split into siblings that share a numeric stem (08, 08b, 08c) when it
+  // grows too large to read for a narrow task. That is a deliberate split, not drift, so
+  // the rule ids stay continuous across them and this is not worth warning about.
+  const stems = new Set([...fileSet].map((f) => (/^(\d+)/.exec(f.split(/[\\/]/).pop()) ?? [])[1]))
+  if (stems.size === 1 && !stems.has(undefined)) continue
+  warn(prefix, `prefix defined across ${fileSet.size} files: ${[...fileSet].join(', ')}`)
 }
 
 // --- 4. Numbering gaps -------------------------------------------------------

@@ -120,7 +120,7 @@ judgement call.
 - **A learning curve.** Style expressions, `feature-state`, `promoteId`, `source-layer` and
   the sprite pipeline are all things a developer must learn before their first layer works,
   where a DOM marker works immediately. `08` exists largely to shorten that.
-- **Harder debugging**, with a documented pitfall table ([08](../08-MAP-MAPLIBRE.md) §15) as
+- **Harder debugging**, with a documented pitfall table ([08](../08-MAP-MAPLIBRE.md)) as
   the mitigation.
 - **Two mechanisms remain in the codebase.** The 20-marker exception means both models exist,
   and the boundary is a rule a reviewer enforces. A feature that starts with three markers and

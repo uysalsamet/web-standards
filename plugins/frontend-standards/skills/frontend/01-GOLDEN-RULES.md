@@ -136,18 +136,18 @@ picker, a live video badge), never for datasets. Hover and selection use `featur
 not `setData`.
 > **Why:** 2,000 DOM markers is 2,000 absolutely-positioned elements re-laid-out on every
 > frame of every pan; the map drops to 10 fps. The same 2,000 points in a `circle` layer
-> cost nothing measurable. Detail: [08](08-MAP-MAPLIBRE.md) §3, [ADR-0009](adr/0009-marker-rendering.md).
+> cost nothing measurable. Detail: [08](08-MAP-MAPLIBRE.md), [ADR-0009](adr/0009-marker-rendering.md).
 
 **[GEN-19] MUST: Large data becomes tiles.** A GeoJSON source is allowed up to 5,000
 features or 2 MB. Beyond that the data is served as vector tiles (MVT) from the tile
 service. The browser never downloads a 40 MB GeoJSON.
-> Detail: [08](08-MAP-MAPLIBRE.md) §4, [APPENDIX-GIS-DATA.md](APPENDIX-GIS-DATA.md) §4, [ADR-0010](adr/0010-geodata-delivery.md).
+> Detail: [08](08-MAP-MAPLIBRE.md), [APPENDIX-GIS-DATA.md](APPENDIX-GIS-DATA.md) §4, [ADR-0010](adr/0010-geodata-delivery.md).
 
 **[GEN-20] MUST: One map instance, owned by context, cleaned up completely.** Every layer,
 source, image, event listener and popup a feature adds is removed when the feature
 unmounts, in the right order (layers before sources), guarded against a map whose style is
 not loaded yet.
-> Detail: [08](08-MAP-MAPLIBRE.md) §2, §7.
+> Detail: [08](08-MAP-MAPLIBRE.md), §7.
 
 ---
 

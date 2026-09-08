@@ -54,7 +54,7 @@ sets of layer-lifecycle bugs, two styling languages and two bodies of agent-gene
   niche, we write it.
 - **MapLibre 6 is already released** ([02](../02-TECH-VERSIONS.md) lists 6.7 as latest) with
   style-spec and API changes. We are pinned to 5.x, so we are carrying a known, growing
-  upgrade debt with a checklist ([08](../08-MAP-MAPLIBRE.md) §14) that has not yet passed on
+  upgrade debt with a checklist ([08](../08-MAP-MAPLIBRE.md)) that has not yet passed on
   the reference repo. Terrain, `feature-state` on clustered sources and the draw adapter are
   the open items.
 
@@ -134,7 +134,7 @@ data rather than imperative code.
 
 ## What would change this decision
 
-- The MapLibre 6 checklist ([08](../08-MAP-MAPLIBRE.md) §14) passing, which does not change
+- The MapLibre 6 checklist ([08](../08-MAP-MAPLIBRE.md)) passing, which does not change
   the library but does close the debt above; or that checklist failing permanently on terrain
   or the draw adapter, which would force a re-evaluation of the drawing stack rather than the
   map.
