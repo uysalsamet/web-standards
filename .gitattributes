@@ -1,2 +1,11 @@
-# Auto detect text files and perform LF normalization
+# Everything is stored with LF in the repository; checkout follows the platform.
 * text=auto
+
+# Files that RUN inside a container or a shell must stay LF on every platform.
+# A shell script checked out with CRLF dies with "\r: command not found", and the
+# reason is not obvious from the error.
+*.sh            text eol=lf
+*.mjs           text eol=lf
+*.template      text eol=lf
+*.conf          text eol=lf
+Dockerfile      text eol=lf
