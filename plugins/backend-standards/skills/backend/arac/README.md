@@ -14,6 +14,10 @@
 |---|---|
 | `standart-kontrol.sh` | Dil dışı ve çapraz kurallar: SQL, Dockerfile, compose, route yetkisi, para tipi, repo hijyeni |
 | `golangci.yml` | Go diline özgü kurallar; servis kökünde `.golangci.yml` olarak kopyalanır |
+| `sir-tarama.sh` | Sır sızıntısı: izlenen `.env`/`.pem`, gömülü sır, `.gitignore` eksiği ([SEC-38]) |
+| `koleksiyon-kosum.sh` | Postman koleksiyonunu koşturur, assertion arar, kaba süre ölçer ([TEST-23]) |
+| `yuk-testi.sh` | k6 yük testi + [PERF-01] karşılaştırması + ölçüm geçerlilik kapısı ([PERF-33]) |
+| `surum-onerisi.sh` | Upstream sürüm önerisi ([VER-21]). **Asla FAIL vermez** |
 
 İkisi **birbirini tamamlar**: `golangci-lint` Go AST'ine bakar (kesin), script metin
 desenlerine bakar (geniş ama heuristik).
@@ -53,7 +57,7 @@ Uyarılar çıkış kodunu etkilemez.
 
 ---
 
-## Kontrol edilen kurallar (29 + linter)
+## Kontrol edilen kurallar — `standart-kontrol.sh` (29 + linter)
 
 ### `standart-kontrol.sh`
 
@@ -123,7 +127,141 @@ hata bloğu ilk sürümde kaçıyordu — `awk` tabanlı iki satırlık desene �
 
 ---
 
-## Sınırlar — dürüstlük bölümü
+## Yeni araçlar (2026-09-08)
+
+Dört araç eklendi. Üçü CI'ı kırar, biri **bilerek kırmaz**.
+
+| Dosya | Ne yapar | CI'ı kırar mı |
+|---|---|---|
+| `sir-tarama.sh` | Sır sızıntısı: izlenen `.env`/`.pem`, gömülü sır, `.gitignore` eksiği ([SEC-38]) | Evet, kritik bulguda |
+| `koleksiyon-kosum.sh` | Postman koleksiyonunu koşturur, assertion arar, kaba süre ölçer ([TEST-23], [TEST-24]) | Evet |
+| `yuk-testi.sh` | k6 ile yük testi, [PERF-01] hedefleriyle karşılaştırır, ölçüm geçerliliğini denetler ([PERF-33], [PERF-34]) | Evet, ölçüm geçerliyse |
+| `surum-onerisi.sh` | Upstream'de yeni sürüm var mı ([VER-21]) | **Hayır, asla** |
+
+```bash
+# Sır taraması — her PR'da
+bash arac/sir-tarama.sh .
+
+# Koleksiyon: servis ayakta değilken bile statik inceleme yapılabilir
+bash arac/koleksiyon-kosum.sh docs/Servis.postman_collection.json --sadece-analiz
+bash arac/koleksiyon-kosum.sh docs/Servis.postman_collection.json \
+     --taban-url http://localhost:9000 --tekrar 3 --kod-dizini services/parking-service
+
+# Yük testi — gece koşumunda ya da performansa dokunan PR'da
+bash arac/yuk-testi.sh http://localhost:9000/parkings --sinif liste --sure 30s --vu 10
+bash arac/yuk-testi.sh --ozet onceki-ozet.json --sinif liste     # k6 olmadan değerlendirme
+bash arac/yuk-testi.sh <url> --sinif liste --karsilastir dun.json
+
+# Sürüm önerisi — aylık, ya da bağımlılık dokunulan PR'da
+bash arac/surum-onerisi.sh .
+```
+
+Çıkış kodları: `0` temiz · `1` ihlal · `2` araç yok, kullanım hatası **veya ölçüm
+yorumlanamaz**. `surum-onerisi.sh` her koşumda `0` döner.
+
+---
+
+### Neden `2` ayrı bir kod
+
+`1` "kural ihlal edildi" demektir; `2` "bir şey söyleyemiyorum" demektir. İkisini aynı koda
+bağlamak, aracın bilmediği durumu ihlal gibi gösterir ve tersi de olur: k6 kurulu olmadığı
+için başarısız olan bir adım, "performans hedefi kaçtı" gibi okunur. Ayrım, [PERF-34]'ün
+ölçüm geçerlilik kapısının çalışabilmesi için gerekli.
+
+### `sir-tarama.sh` — üç tasarım kararı
+
+**Değeri asla basmaz.** Bulunan sır yalnızca konum, tür ve dört karakterlik önek + uzunluk
+olarak raporlanır (`ca75... (32 karakter)`). Bir denetim raporu, bulduğu sırrı yayınlamamalı;
+bu standardın kendi [SEC-25] kuralıdır ve araç kendi kuralına uyar.
+
+**Düzeltme yapmaz.** `git rm` yok, geçmiş temizleme yok, rotasyon yok. Sebebi teknik: sızmış
+bir sırrı dosyadan silmek onu geçmişten kaldırmaz, ve rotasyon yapılmadan silmek sorunu
+çözmeden görünmez kılar. Kapatma sırası insanda: önce rotasyon, sonra takipten çıkarma,
+geçmiş temizliği en son ve ayrı bir karar.
+
+**Git geçmişini taramaz.** Yalnızca çalışma ağacına ve `git ls-files` çıktısına bakar.
+Geçmişte silinmiş ama bir commit'te duran sır bu araca **görünmez**. En büyük eksiği budur
+ve script bunu her koşumda kendi çıktısında söyler.
+
+### `koleksiyon-kosum.sh` — neden p95 yazmaz
+
+Endpoint başına üç örnekle p95 hesaplanamaz. Araç min/medyan/maks verir, SLO kararı
+**vermez** ve JSON çıktısında bunu açıkça işaretler (`p95_hesaplandi_mi: false`,
+`slo_karari: null`). Hedefe göre karar [PERF-33]'ün işidir, `yuk-testi.sh` ile.
+
+`newman run -n 3` koleksiyonun tamamını üç kez koşar, yani aynı uca peş peşe vurulmaz;
+istekler doğal olarak serpiştirilir. Bu, cache'in aynı endpoint'i art arda ısıtmasını
+engeller ama etkisini sıfırlamaz, ve araç bunu söyler.
+
+Endpoint sınıflandırması (tek kayıt / liste / yazma / ağır) metot ve yol deseninden
+çıkarılan bir **sezgiseldir**. Yolda `search` geçen bir `POST` yazma değil okuma sayılır;
+bu istisna hem kodda hem çıktıda işaretli. Adı masum ama pahalı bir uç yanlış sınıflanır.
+
+### `surum-onerisi.sh` — neden asla FAIL etmez
+
+İki farklı soru vardır ve karıştırılırsa ikisi de işe yaramaz hâle gelir:
+
+| Soru | Kural | Sonuç |
+|---|---|---|
+| Bu servis standardın tablosuna uyuyor mu | [VER-01] | **FAIL** — `standart-kontrol.sh`'nin işi |
+| Upstream'de daha yenisi var mı | [VER-21] | Bilgi — bu aracın işi |
+
+Yeni sürüm çıktı diye pipeline kırmak, ekibi aracı devre dışı bırakmaya iter ve sonunda
+hiçbir şey güncellenmez. Araç `-mod=readonly` ile koşar: eksik `go.sum` girdisini bildirir
+ama **yazmaz**. Rapor üreten bir araç, raporladığı deponun kaynak dosyalarını değiştirmez.
+
+---
+
+## Doğrulama — yeni araçlar da test edildi
+
+Ölçüm tarihi 2026-09-08, gerçek depolar üzerinde.
+
+| Araç | Koşum | Sonuç |
+|---|---|---|
+| `sir-tarama.sh` | frontend deposu | 31 kritik, 3 uyarı, çıkış 1 |
+| `sir-tarama.sh` | microservices deposu | 8 kritik, 3 uyarı, çıkış 1 |
+| `sir-tarama.sh` | temiz örnek depo | **0 bulgu, çıkış 0** |
+| `koleksiyon-kosum.sh` | address-search koleksiyonu, statik | 9 istek, **0 assertion**, çıkış 1 |
+| `koleksiyon-kosum.sh` | newman yok / servis kapalı | temiz mesaj, çıkış 2 |
+| `yuk-testi.sh` | k6 yok / hedef verilmemiş | temiz mesaj, çıkış 2 |
+| `yuk-testi.sh` | 7 geçerlilik kapısı, sahte özetlerle | 7/7 doğru karar |
+| `surum-onerisi.sh` | 47 modül, ağlı | 47 standart dışı, 1127 güncelleme, **çıkış 0** |
+
+Bu koşumlarda ortaya çıkan gerçek bulgular — izlenen `.env` ve özel anahtar dosyaları,
+assertion'suz koleksiyonlar, üç farklı Go sürümü, eksik `go.sum` — kuralların gerekçe
+bölümlerine ölçüm olarak işlendi. Standardın maddeleri varsayımdan değil, bu depoların
+gerçek durumundan türetildi.
+
+Test sırasında araçlarda bulunup düzeltilen kusurlar: Windows sürücü harfinin (`C:`) satır
+numarasını bozması, arayüz çevirisindeki "Şifreniz" metninin sır sanılması, MQTT
+`token.Error()` çağrısının [SEC-25] ihlali sanılması, `ST_Intersects` deseninden sahte kolon
+adı üretilmesi, migration dosyalarının N+1 bulgusu vermesi. Hepsi [ARAC-02] gereği kuralı
+**daraltarak** çözüldü, kontrolü kapatarak değil.
+
+---
+
+## Yeni araçların sınırları
+
+**[ARAC-05] ZORUNLU:** `sir-tarama.sh` git geçmişini taramaz ve entropi hesaplamaz. İsimsiz
+bir değişkene atanmış (`k = "..."`) ya da base64 gömülü sırrı kaçırır. Taradığı uzantılar
+`.go .yml .yaml .json .sql Dockerfile*` ile sınırlıdır. Temiz çıkması "sır yok" demek
+değildir; "bu desenlerle bulunamadı" demektir.
+
+**[ARAC-06] ZORUNLU:** `koleksiyon-kosum.sh`'nin endpoint sınıfı ve kod bulguları metin
+desenidir, kanıt değildir. Ölçüm istemci tarafındadır: ağ, gateway ve makine yükü sürelerin
+içindedir. `node` gerektirir; yoksa çıkış 2.
+
+**[ARAC-07] ZORUNLU:** `surum-onerisi.sh` ağ gerektirir ve 47 modülde dakikalar sürer.
+Ağ yoksa `go` direktifi tablosunu yine üretir ve ağ gerektiren kısmın neden atlandığını
+söyler. `--major-tara` yalnızca **bir üst** major'ı yoklar; kapalıyken rapor "taranmadı"
+yazar, "yok" demez.
+
+**[ARAC-08] ZORUNLU:** `yuk-testi.sh` sonucu mutlak bir hüküm değildir. Ölçüm makineye ve
+ağa bağlıdır ([PERF-35]); anlam, aynı ortamdaki önceki koşumla karşılaştırmadadır. Geçerlilik
+kapılarından biri düşerse araç karar **vermez** ve çıkış 2 döner — bu bir başarısızlık değil,
+"bu sayıdan hüküm çıkmaz" demektir.
+
+## Sınırlar — dürüstlük bölümü (standart-kontrol.sh)
 
 **[ARAC-01] ZORUNLU:** Bu araçlar **heuristiktir, kanıt değildir.**
 - Metin deseni tabanlı kontroller yanlış pozitif/negatif verebilir.

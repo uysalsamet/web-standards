@@ -32,7 +32,7 @@ of limits. Whoever writes it, human or AI. All documents live next to this file.
 |---|---|---|
 | 🚀 | [BASLANGIC.md](BASLANGIC.md) | Wiring the standard into a repo: `sablon/` agent files, opening prompt, task-specific openers |
 | 📁 | [sablon/](sablon/) | Copyable agent instruction files: `AGENTS.md` + Claude/Cursor/Copilot/Windsurf/Gemini pointers |
-| 🔧 | [arac/](arac/README.md) | `standart-kontrol.sh` + `golangci.yml`: the machine-checkable ~9 % |
+| 🔧 | [arac/](arac/README.md) | Six audit tools: standards, secrets, collection, load test, version advisory, linter config |
 | 🗺 | [KURAL-HARITASI.md](KURAL-HARITASI.md) | Signal → rule table; task → reading list; known gaps |
 | 01 | [01-ALTIN-KURALLAR.md](01-ALTIN-KURALLAR.md) | **Always** |
 | 02 | [02-TEKNOLOJI-SURUMLERI.md](02-TEKNOLOJI-SURUMLERI.md) | Starting a service, adding a dependency, `go.mod`/Dockerfile/compose |
@@ -73,8 +73,21 @@ of limits. Whoever writes it, human or AI. All documents live next to this file.
 
 ```bash
 bash <skill-dir>/arac/standart-kontrol.sh .    # exit code must be 0
+bash <skill-dir>/arac/sir-tarama.sh .          # exit code must be 0 (secret leak scan)
 golangci-lint run                               # clean (config: arac/golangci.yml → .golangci.yml)
+go test -race ./...                             # clean
+
+# When the service is up (needs a running gateway):
+bash <skill-dir>/arac/koleksiyon-kosum.sh docs/<Service>.postman_collection.json
+bash <skill-dir>/arac/yuk-testi.sh <url> --sinif liste      # verifies the PERF-01 targets
+
+# Advisory only, never fails:
+bash <skill-dir>/arac/surum-onerisi.sh .
 ```
+
+`sir-tarama.sh` only reports; it never edits, deletes or rotates anything. Closing a finding
+is a human decision. `surum-onerisi.sh` always exits 0 by design: a newer upstream version is
+information, not a violation.
 
 Then walk `15-YENI-SERVIS-CHECKLIST.md` item by item. Say explicitly which items were
 skipped and why. A clean tool run is not "compliant"; tools see roughly 9 % of the rules.
@@ -85,5 +98,8 @@ skipped and why. A clean tool run is not "compliant"; tools see roughly 9 % of t
 - Add a dependency without approval.
 - Say "small change, no need to check the standard".
 - Use `float` for money, `SELECT *`, `TIMESTAMP` without time zone, or `gin.Default()`.
+- Treat a Postman collection without assertions as "working" ([TEST-24]).
+- Fix a secret leak by deleting the file: removing it does not remove it from history, and
+  without rotation it only hides the problem ([SEC-38]).
 - Run git commands that change state (commit, push, reset, checkout, stash, branch/tag
   create or delete). Read-only git only.

@@ -189,6 +189,37 @@ CI'da `govulncheck` koşar ([CI-15]); bulgu varsa build kırmızıdır.
 
 ---
 
+## 5b. Bağımlılık güncelliği — tavsiye, zorlama değil
+
+**[VER-21] ÖNERİLEN:** `arac/surum-onerisi.sh` düzenli olarak (aylık, ya da bağımlılık
+dokunulan her PR'da) koşar ve upstream'de yeni sürümü olan bağımlılıkları listeler. Araç
+**hiçbir zaman FAIL vermez**; çıkış kodu her koşumda 0'dır.
+> **Neden:** İki farklı soru vardır ve karıştırılırsa ikisi de işe yaramaz hâle gelir.
+> [VER-01] "bu servis standardın tablosuna uyuyor mu" diye sorar ve uymuyorsa **build'i
+> kırar**. Bu kural ise "upstream'de daha yenisi var mı" diye sorar; buna evet demek bir
+> ihlal değildir, bir bilgidir. Yeni sürüm çıktı diye pipeline kırmak, ekibi aracı kapatmaya
+> iter ve sonunda hiçbir şey güncellenmez.
+
+**[VER-22] ZORUNLU:** Major sürüm atlamaları tek tek yapılır ve ilgili ADR'nin "Kararı ne
+değiştirir" bölümü kontrol edilir ([VER-08] ile aynı çizgi). Araç, major atlamalarını ayrı
+grupta gösterir.
+
+**Ölçüm (2026-09-08, referans depo):** 47 servisin `go` direktifi şöyle dağılmış: **35**
+servis `1.23.6`, **10** servis `1.24.0`, **2** servis `1.23.0`. Standart `1.25.12` diyor.
+Yani tek bir servis bile uymuyor ve aralarında da üç farklı sürüm var. [VER-01] bunu
+yakalar ve build'i kırar; [VER-21] ise yükseltmenin nereye kadar mümkün olduğunu söyler.
+Sürüm sürüklenmesi kendi kendine olmaz, kimse bakmadığı için olur.
+
+Aynı koşumda ikinci bir bulgu çıktı: 47 modülün **9'u sorgulanamadı**, sebebi
+`missing go.sum entry for go.mod file`. Yani o servislerin `go.sum` dosyası eksik ve
+[VER-04] ihlal ediliyor. Aracın bunu "düzeltmemesi" bilinçlidir: `-mod=mod` ile koşsaydı
+eksik girdileri sessizce yazar, senin `go.mod`/`go.sum` dosyalarını bir rapor komutu
+değiştirmiş olurdu. Araç `-mod=readonly` ile koşar ve eksikliği **bildirir**.
+> **Kural olarak:** rapor üreten hiçbir araç, raporladığı deponun kaynak dosyalarını
+> değiştirmez ([ARAC-01] ile aynı çizgi). Denetim ile düzeltme ayrı komutlardır.
+
+---
+
 ## 6. Mevcut projelerle ilişki
 
 **[VER-17] ZORUNLU — Bundan sonra yazılan HER servis Gin ile yazılır.** İstisna yok.

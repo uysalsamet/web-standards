@@ -1,7 +1,7 @@
 {
   "name": "backend-standards",
   "displayName": "Backend Standards",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Binding backend engineering standard (content in Turkish) for Go + Gin microservices behind an API gateway: clean architecture, API contract, security, resilience, PostgreSQL/PostGIS, cache, observability, Docker, CI. Skill: /backend-standards:backend",
   "author": {
     "name": "Samet Yasin Uysal"

@@ -115,7 +115,29 @@ söyle**. Gerekçesiz uygulanan öneri, incelemede yakalanmayan bir hataya dön�
 8. govulncheck ./...                 → bilinen açık varsa FAIL
 9. docker build                      → imaj gerçekten build oluyor mu
 10. (öneri) imaj taraması (Trivy)    → HIGH/CRITICAL varsa FAIL
+11. ./backend-standartlari/arac/sir-tarama.sh .        → kritik bulguda FAIL [CI-26]
+12. go test -run=Fuzz -fuzz=Fuzz -fuzztime=30s ./...   → çökmede FAIL [CI-28]
+13. ./backend-standartlari/arac/koleksiyon-kosum.sh <koleksiyon>  → assertion kırıldıysa FAIL [CI-27]
+14. ./backend-standartlari/arac/surum-onerisi.sh .     → yalnızca rapor, ASLA FAIL etmez [VER-21]
 ```
+
+Adım 13 servis ayakta gerektirir; compose ile ayağa kaldırılan bir ortamda koşar. Adım 14
+bilerek FAIL etmez, çıktısı PR yorumuna yazılır.
+
+**[CI-26] ZORUNLU:** Sır taraması ([SEC-38]) her PR'da koşar ve kritik bulguda pipeline
+kırılır. Araç düzeltme yapmaz; bulguyu kapatmak insanın işidir.
+
+**[CI-27] ZORUNLU:** Postman koleksiyonu ([TEST-23]) CI'da koşar. Koleksiyonu olmayan ya da
+assertion içermeyen servis bu adımı geçemez ([TEST-24]).
+
+**[CI-28] ZORUNLU:** Fuzz hedefi varsa CI'da `-fuzztime=30s` ile koşar ([TEST-28]); korpus
+girdileri zaten adım 6'da normal test olarak çalışır.
+
+**[CI-29] ÖNERİLEN:** Yük testi ([PERF-33]) her PR'da değil, **gece koşumunda** ve
+performansa dokunan PR'larda koşar. Ölçüm geçerlilik kapısına takılırsa sonuç
+yorumlanmaz ([PERF-34]).
+> **Neden:** Yük testi dakikalar sürer ve [CI-20]'nin 10 dakikalık pipeline hedefini tek
+> başına aşar. Her PR'da koşturmak, ekibi onu devre dışı bırakmaya iter.
 
 **[CI-16] ZORUNLU:** CI kırmızıysa merge edilmez. "Sonra düzeltirim" ile merge edilen
 kırmızı build, ertesi gün herkesin build'ini kırar.

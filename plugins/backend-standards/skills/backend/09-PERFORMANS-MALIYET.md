@@ -183,7 +183,59 @@ bağlantı = 100 bağlantı ([DB-03]). PgBouncer olmadan yatay ölçekleme DB'yi
 
 ---
 
-## 8. ASLA YAPMA — performans
+## 8. Yük testi ve ölçümün geçerliliği
+
+[PERF-01] hedefler koyar, [PERF-02] bu hedeflerin p95/p99 üzerinden değerlendirilmesini
+söyler. Ama hedefi **doğrulayan** bir adım yoktu: [PERF-21] yük testini tek cümleyle
+öneriyordu, koşan bir şey yoktu. Bu bölüm o boşluğu kapatır.
+
+**[PERF-32] ZORUNLU:** Postman koleksiyonu koşumu ([TEST-23]) bir yük testi **değildir** ve
+SLO kararı vermez. `arac/koleksiyon-kosum.sh` süreleri raporlar, ama p95 hesaplamaz ve
+"hedef karşılandı" demez.
+> **Neden:** Endpoint başına üç örnekle p95 hesaplanamaz; hesaplanmış gibi sunmak [PERF-02]'yi
+> ihlal eder. Koleksiyon koşumunun işi doğruluk ve kaba bir süre fikri vermektir. Üç örnekten
+> "yeşil" çıkarmak, olmayan bir güvence üretir.
+
+**[PERF-33] ZORUNLU:** Yeni servis ve performansı etkileyen değişiklik, `arac/yuk-testi.sh`
+ile ölçülür ve sonuç [PERF-01] hedefleriyle karşılaştırılır ([CI-29]). Endpoint sınıfına
+göre eşik:
+
+| Sınıf | p95 hedefi |
+|---|---|
+| Tek kayıt okuma | < 100 ms |
+| Liste | < 200 ms |
+| Yazma | < 300 ms |
+| Ağır rapor / export | < 3 sn |
+| 5xx oranı | < %0,1 |
+
+> **Neden:** "Hızlı hissettiriyor" bir ölçüm değildir. Hedef zaten yazılıydı; onu düzenli
+> olarak kontrol eden bir adım olmadan hedef, iyi niyet beyanı olarak kalır.
+
+**[PERF-34] ZORUNLU:** Ölçüm, yorumlanmadan önce **geçerlilik kapısından** geçer. Şu
+durumlarda araç "bu ölçüm yorumlanamaz" der ve geçti/kaldı kararı **vermez**:
+
+| Kapı | Neden |
+|---|---|
+| Toplam istek < 100 | p95 istatistiksel olarak anlamsız |
+| Süre < 10 sn | Isınma etkisi baskın; JIT değil ama bağlantı havuzu ve cache dolmamış |
+| Hata oranı > %50 | Ölçülen şey servis değil, hata yolu |
+| p95 / p50 > 10 | Ortam gürültülü ya da kuyruk doygun; sayı servisi anlatmıyor |
+| Tüm yanıtlar aynı süre | Şüpheli: cache ya da sahte yanıt ölçülüyor |
+| Hedef `localhost` ve VU > 50 | İstemci kendi makinesini doygunlaştırıp kendi ölçümünü bozuyor |
+
+> **Neden:** Geçersiz ölçümden verilen karar, ölçüm yapılmamasından **daha kötüdür**: yanlış
+> bir güven üretir ve gerçek sorunu arama isteğini öldürür. Bir aracın "bilmiyorum" diyebilmesi
+> gerekir.
+
+**[PERF-35] ZORUNLU:** Yük testi sonucu **mutlak sayı olarak değil, aynı ortamdaki önceki
+koşumla karşılaştırılarak** yorumlanır. Ölçüm makineye, ağa ve o anki yüke bağlıdır.
+> **Neden:** Dizüstünde 80 ms ölçülen uç, paylaşımlı bir runner'da 300 ms verir; ikisi de
+> doğrudur ve ikisi de tek başına bir şey söylemez. Anlam farkta: aynı ortamda dün 90 ms
+> olan şey bugün 240 ms ise, bakılacak bir şey vardır.
+
+---
+
+## 9. ASLA YAPMA — performans
 
 - ❌ Ölçmeden optimize etmek
 - ❌ Ölçmeden "hızlı/yavaş" demek

@@ -191,12 +191,18 @@
 - [ ] `govulncheck ./...` temiz — [SEC-34]
 - [ ] Elle E2E listesi ([12](12-TEST.md) §6) koşuldu ve sonucu PR'a yazıldı — [TEST-21]
 - [ ] Yetki yüklemesi **DB'den sorgulanarak** doğrulandı, log'a bakılarak değil — [TEST-22]
+- [ ] Postman koleksiyonu **assertion içeriyor** (yalnızca istek listesi değil) — [TEST-24]
+- [ ] `arac/koleksiyon-kosum.sh` koleksiyonu gateway üzerinden koşturdu, kırık istek yok — [TEST-23], [TEST-25]
+- [ ] Dış girdi ayrıştıran fonksiyonlar için fuzz hedefi var; çökme girdileri `testdata/fuzz/`'da — [TEST-26], [TEST-27]
+- [ ] `arac/sir-tarama.sh` temiz (exit 0); kritik bulgu varsa PR'da açıkça yazıldı — [SEC-38]
+- [ ] `arac/yuk-testi.sh` koştu, [PERF-01] hedefleri karşılandı **ya da** ölçümün neden yorumlanamadığı yazıldı — [PERF-33], [PERF-34]
+- [ ] `arac/surum-onerisi.sh` çıktısı gözden geçirildi (FAIL vermez, karar senindir) — [VER-21]
 
 ## J. Dokümantasyon
 
 - [ ] `docs/README.md`: servis ne yapar, endpoint listesi, yetki listesi — [API-31]
 - [ ] `docs/ui-integration.md`: frontend akışları, örnek istek/yanıt
-- [ ] Postman koleksiyonu çalışır durumda
+- [ ] Postman koleksiyonu çalışır durumda — **koşturularak** doğrulandı, açılarak değil — [TEST-23]
 - [ ] Standarttan sapma varsa koda `// STANDART İSTİSNASI [ID]: gerekçe` yazıldı ve PR'da belirtildi — [CI-08]
 
 ---

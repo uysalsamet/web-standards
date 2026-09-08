@@ -304,6 +304,18 @@ düzenli güncellenir — çoğu konteyner açığı base imajın eski paketleri
 **[SEC-37] ÖNERİLEN:** İmaj taraması (Trivy/Grype) CI'da koşar; HIGH/CRITICAL bulgular
 merge'ü engeller.
 
+**[SEC-38] ZORUNLU:** CI'da `arac/sir-tarama.sh` koşar ([CI-26]). Kritik bulguda pipeline
+kırılır. Araç **yalnızca tespit eder**: dosya silmez, geçmiş temizlemez, sır rotasyonu
+yapmaz. Bunlar insan kararıdır.
+> **Neden:** [SEC-20] `.gitignore` ister, [SEC-22] rotasyon ister, [CI-19] pipeline'a sır
+> yazmayı yasaklar — ama hiçbiri **kontrol edilmiyordu**. Bu, standardın kendi ilkesiyle
+> çelişir ([ARAC-03]): mekanik olarak yakalanabilen bir kural code review'a bırakılmaz.
+> Somut kanıt: aynı organizasyonun bir frontend deposunda `.env` ve `.env.prod` şu anda
+> git tarafından **izleniyor**, yani içindeki değerler zaten commit geçmişinde.
+> Aracın düzeltme yapmamasının sebebi: sızmış bir sırrı dosyadan silmek onu geçmişten
+> kaldırmaz ve rotasyon yapılmadan silmek, sorunu çözmeden görünmez kılar.
+
+
 ---
 
 ## 10. ASLA YAPMA — güvenlik

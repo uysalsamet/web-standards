@@ -230,7 +230,95 @@ SELECT module, COUNT(*) FROM permissions WHERE module = 'parking' GROUP BY modul
 
 ---
 
-## 7. ASLA YAPMA — test
+## 7. Postman koleksiyonu — canlı sözleşme
+
+Koleksiyon, `03` gereği her serviste bulunur. Ama dosyanın var olması onu doğru yapmaz;
+koşulmayan koleksiyon bir belge bile değildir, çünkü yanlış olduğu hiç anlaşılmaz.
+
+**Ölçüm (2026-09-08, referans depo):** 47 servisin **27**'sinde koleksiyon var, yani 20
+servis `03`'ün zorunluluğunu hiç karşılamıyor. Bu 27 koleksiyon toplam **423** istek
+içeriyor, ama içlerinden yalnızca **9**'unda herhangi bir test scripti var. Yani
+koleksiyonların üçte ikisi, koşulsalar bile hiçbir şey doğrulamaz.
+
+**[TEST-23] ZORUNLU:** Koleksiyon CI'da `arac/koleksiyon-kosum.sh` ile koşar ([CI-27]).
+Koşmayan koleksiyon ölü artefakttır ve `15`'teki "çalışır durumda" maddesi onun için
+imzalanamaz.
+> **Neden:** Koleksiyon, API'nin yürütülebilir sözleşmesidir. Endpoint yolu değişir,
+> koleksiyon eski kalır, ve onu ilk açan kişi (çoğunlukla frontend geliştiricisi)
+> çalışmayan istekle uğraşır. Bu, standardın kendi ilkesine de aykırıdır ([ARAC-03]):
+> mekanik olarak kontrol edilebilen bir şey code review'a bırakılmaz.
+
+**[TEST-24] ZORUNLU:** Koleksiyondaki her istek en az bir assertion içerir. En azından
+durum kodu ve yanıt zarfı ([API-01]) doğrulanır:
+
+```js
+// Postman "Tests" sekmesi — her istekte en az bu kadarı bulunur.
+pm.test("durum 200", () => pm.response.to.have.status(200));
+pm.test("zarf doğru", () => {
+  const b = pm.response.json();
+  pm.expect(b).to.have.property("data");      // liste ucunda ayrıca b.meta
+});
+```
+> **Neden:** Assertion'suz koşum yalnızca "sunucu bir şey döndü" der. Ölçüm bunun teorik
+> bir kaygı olmadığını gösteriyor: koleksiyonların üçte ikisi bugün tam olarak bu durumda.
+> Gövdesi `null` dönen bir uç, assertion olmadan yeşil görünür.
+
+**[TEST-25] ZORUNLU:** Koleksiyon gateway üzerinden koşar, doğrudan servise değil
+([TEST-21] ile aynı gerekçe). Taban URL ortam değişkeninden gelir; koleksiyona sabit
+`localhost:PORT` yazılmaz.
+> **Neden:** Doğrudan servise vuran koleksiyon gateway'in yetki ve normalizasyon katmanını
+> atlar; üretimde 403 verecek bir çağrı testte 200 verir.
+
+---
+
+## 8. Fuzzing — sınır değerlerinin otomatik hâli
+
+[TEST-08] sınır değerlerini **elle** sayar. Fuzzing bunun otomatik hâlidir ve Go 1.18'den
+beri standart kütüphanededir; yani [ADR-0011]'in "stdlib + stub + testcontainers" kararını
+bozmaz, yeni bağımlılık getirmez.
+
+**[TEST-26] ÖNERİLEN:** Dış girdiyi ayrıştıran her fonksiyon için bir fuzz hedefi yazılır.
+Doğal hedefler:
+
+| Hedef | Neden burası |
+|---|---|
+| GeoJSON / koordinat ayrıştırma | Kapanmayan halka, ters sarım, Null Island, NaN, kutup dışı enlem ([GIS-01]) |
+| Üç durumlu tarih `UnmarshalJSON` ([API-11]) | `null`, alan yok, boş string, geçersiz format: dördü de farklı davranmalı |
+| Türkçe metin normalizasyonu ([TRK-05]) | ı/İ, birleştirilmiş Unicode, sıfır genişlikli karakter |
+| `clampPagination` ([YAP-18]) | Negatif, sıfır, `MaxInt`, taşma |
+| Filtre/sıralama ayrıştırma ([API-26]) | Beyaz liste dışı kolon adı, araya sıkıştırılmış SQL parçası |
+
+```go
+// internal/dto/tarih_fuzz_test.go
+func FuzzUcDurumluTarih(f *testing.F) {
+    // Tohum korpusu: bilinen üç durum + bir geçersiz biçim.
+    f.Add(`{"tarih":"2026-09-08T00:00:00Z"}`)
+    f.Add(`{"tarih":null}`)
+    f.Add(`{}`)
+    f.Add(`{"tarih":"08.09.2026"}`)
+
+    f.Fuzz(func(t *testing.T, govde string) {
+        var d GuncellemeIstegi
+        // Tek beklenti: PANİK ETME. Hata döndürmek geçerli bir sonuçtur.
+        _ = json.Unmarshal([]byte(govde), &d)
+    })
+}
+```
+
+**[TEST-27] ZORUNLU:** Fuzz yazıldıysa, bulduğu her çökme girdisi `testdata/fuzz/` altına
+commit'lenir. O dosya artık kalıcı bir regresyon testidir.
+> **Neden:** Fuzzing rastgeledir; aynı çökmeyi ikinci kez bulacağının garantisi yoktur.
+> Korpusa girmeyen bulgu, bulunmamış sayılır.
+
+**[TEST-28] ZORUNLU:** CI'da fuzz **süreli** koşar (`-fuzztime=30s`), süresiz değil.
+Korpustaki girdiler ise her `go test` koşumunda normal test olarak zaten çalışır.
+> **Neden:** Süresiz fuzz CI'ı sonsuza kadar meşgul eder. Otuz saniye yeni girdi aramak
+> için azdır, ama regresyonu yakalamak için gerekmez; onu korpus yapar. Derin arama gece
+> koşumuna bırakılır.
+
+---
+
+## 9. ASLA YAPMA — test
 
 - ❌ Test yazmadan "çalışıyor" demek
 - ❌ Her testi gerçek DB'ye bağlamak
@@ -244,3 +332,5 @@ SELECT module, COUNT(*) FROM permissions WHERE module = 'parking' GROUP BY modul
 - ❌ Düzeltilen hatayı testsiz kapatmak
 - ❌ Kapsam yüzdesini test kalitesi sanmak
 - ❌ Seed/yetki yüklemesini log'a bakarak doğrulamak
+- ❌ Assertion içermeyen Postman koleksiyonunu "çalışıyor" saymak
+- ❌ Fuzz'ın bulduğu çökme girdisini korpusa eklemeden düzeltmek

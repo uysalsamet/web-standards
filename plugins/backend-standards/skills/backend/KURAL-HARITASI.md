@@ -111,6 +111,11 @@
 | Yeni Temporal workflow | [ASYNC-20]…[ASYNC-24] |
 | Log satırı ekleme | [OBS-01], [OBS-06], [SEC-25] |
 | Yeni metrik | [OBS-10], **[OBS-11]** (etikette UUID/IP yok) |
+| `.env`, `*.pem`, `*.key` dosyasına dokunma | [SEC-20], [SEC-21], **[SEC-38]** (sır taraması) |
+| Yeni endpoint (koleksiyona da eklenir) | [TEST-23], [TEST-24], [TEST-25] |
+| Dış girdi ayrıştıran fonksiyon yazma | [TEST-08], [TEST-26] (fuzz hedefi) |
+| `go.mod` sürüm değiştirme | [VER-01] (FAIL), [VER-21] (öneri) — **ikisi farklı şey** |
+| Performansa dokunan değişiklik | [PERF-33] (yük testi), [PERF-34] (ölçüm geçerliliği) |
 
 ---
 
@@ -187,6 +192,8 @@ Yeni servis kontrol listesi ......................... 15
 | **Yerel geliştirme kurulumu** | Yeni geliştiricinin ilk gün akışı yazılı değil | Açık |
 | **Kapasite planlama** | "Ne zaman büyütmeliyiz" için eşik yok | Açık |
 | **Arama altyapısı** | Postgres FTS mi ayrı arama motoru mu — karar yok | Açık |
+| **API sürümleme** | `04` yolu `/v1` ile başlatıyor ama kırıcı değişiklik gerektiğinde ne olacağı yazılı değil: `/v2` mi açılır, eski sürüm ne kadar yaşar, istemci nasıl haberdar edilir. Frontend ile backend ayrı deploy edildiği için bu er ya da geç gerekir | Açık |
+| **Yedekleme ve geri dönüş** | `07`'de tek kural var; yedek sıklığı, saklama süresi, **geri dönüşün test edilmesi** ve RPO/RTO hedefi yok. Test edilmemiş yedek, yedek değildir | Açık |
 | Çok kiracılılık (multi-tenancy) | Tek kurumlu projede gerekmez | Kapsam dışı (bilinçli) |
 | Özellik bayrağı (feature flag) | İhtiyaç doğmadı | Kapsam dışı (bilinçli) |
 
@@ -206,10 +213,19 @@ tablosuna karşılığı eklenir. Boşluk listesi güncel değilse yanlış güv
 
 ## 4b. Hangi kurallar otomatik kontrol ediliyor?
 
-**29 kural** artık CI'da makine tarafından denetleniyor — bunları ayrıca aramana gerek yok,
+Beş araç CI'da makine tarafından denetim yapıyor — bunları ayrıca aramana gerek yok,
 ihlal edersen build kırılır: [arac/README.md](arac/README.md)
 
-Kalan ~555 kural **hâlâ senin sorumluluğunda.** Otomatik denetimin temiz geçmesi
+| Araç | Ne denetler | FAIL verir mi |
+|---|---|---|
+| `standart-kontrol.sh` | 29 dil dışı kural: SQL, Dockerfile, compose, route yetkisi, para tipi | Evet |
+| `golangci.yml` | Go AST tabanlı kurallar | Evet |
+| `sir-tarama.sh` | İzlenen sır dosyası, gömülü sır, `.gitignore` eksiği ([SEC-38]) | Evet, kritik bulguda |
+| `koleksiyon-kosum.sh` | Koleksiyon koşuyor mu, assertion var mı, kaba süre ([TEST-23], [TEST-24]) | Evet |
+| `yuk-testi.sh` | [PERF-01] hedefleri + ölçüm geçerliliği ([PERF-33], [PERF-34]) | Evet, ölçüm geçerliyse |
+| `surum-onerisi.sh` | Upstream'de yeni sürüm var mı ([VER-21]) | **Hayır, asla** |
+
+Kalan ~550 kural **hâlâ senin sorumluluğunda.** Otomatik denetimin temiz geçmesi
 "standarda uygun" demek değildir ([ARAC-04]).
 
 ---
