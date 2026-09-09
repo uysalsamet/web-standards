@@ -4,10 +4,15 @@ Binding engineering standards for web projects, packaged as [Claude Code](https:
 plugins. Each plugin is a skill: an index (`SKILL.md`) plus rule documents, decision records
 (ADRs), check tools and copyable templates. Claude loads only the rule files a task needs.
 
-| Plugin | Skill | Language | Scope |
-|---|---|---|---|
-| `frontend-standards` | `/frontend-standards:frontend` | English | React 19 + Vite 8 + TypeScript, feature-based structure, TanStack Query, MapLibre GPU rendering rules, i18n key parity, SEO without stale builds, Docker + nginx templates, CI gates. 22 rule files, 21 ADRs, 3 tools |
-| `backend-standards` | `/backend-standards:backend` | Turkish | Go + Gin microservices behind a gateway: clean architecture, API contract, security, resilience, PostgreSQL/PostGIS, cache, observability, Docker, CI. 20 rule files, 18 ADRs, 1 tool |
+| Plugin | Skill | Scope |
+|---|---|---|
+| `frontend-standards` | `/frontend-standards:frontend` | React 19 + Vite 8 + TypeScript, feature-based structure, TanStack Query, MapLibre GPU rendering, i18n key parity, SEO without stale builds, Docker and nginx templates, CI gates. **806 rules** in 25 documents, 21 ADRs, 5 tools |
+| `backend-standards` | `/backend-standards:backend` | Go + Gin microservices behind a gateway: clean architecture, API contract, security, resilience, PostgreSQL and PostGIS, cache, observability, Docker, CI. **594 rules** in 21 documents, 18 ADRs, 7 tools |
+
+Both sets are written in English. The backend standard keeps the rules that come with
+Turkish public-sector work, national identity and tax numbers, KVKK, text casing and
+collation, and explains why each one exists rather than assuming the reader knows. The
+skills answer in whatever language you write to them in.
 
 The standards are also usable without Claude Code: copy a plugin's `skills/<name>/` folder
 into your repo and the `templates/agents/` files to the repo root. `AGENTS.md` works with
