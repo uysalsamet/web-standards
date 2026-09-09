@@ -546,7 +546,7 @@ backend endpoint (`GET /api/geocode?q=`), never directly to Nominatim, Google, M
 other third-party geocoder from the browser.
 > **Why:** [GEN-22] (same origin) and [GEN-10] (no keys in the browser) both apply, and
 > Nominatim's usage policy forbids autocomplete traffic from an application. Beyond
-> compliance, the municipality's own address data (mahalle, ada/parsel, kapı numarası) is
+> compliance, the municipality's own address data (neighbourhood, cadastral block and parcel, door number) is
 > better than any public geocoder inside its own borders, and only the backend has it.
 
 **[GIS-39] MUST:** Search input is debounced **300 ms**, requires at least **3 characters**,
