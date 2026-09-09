@@ -35,7 +35,7 @@ Dockerfile for a frontend, a Go handler…). You can also invoke them explicitly
 
 ```
 /frontend-standards:frontend   I am adding a parking layer to the map. What rules apply?
-/backend-standards:backend     Yeni bir servis açıyorum, iskeleti kur.
+/backend-standards:backend     I am starting a new service. Scaffold it.
 ```
 
 Each skill tells Claude to read the golden rules first, run a "signal scan" over the code it
@@ -45,7 +45,7 @@ running the check tools and walking the checklist.
 ## Wire a standard into a repository
 
 See `plugins/frontend-standards/skills/frontend/START.md` and
-`plugins/backend-standards/skills/backend/BASLANGIC.md`. In short: copy the agent
+`plugins/backend-standards/skills/backend/START.md`. In short: copy the agent
 instruction files to the repo root, add the check tools to CI, and paste the opening prompt
 into the first session.
 
@@ -69,10 +69,12 @@ plugins/
     ├── .claude-plugin/plugin.json
     └── skills/backend/
         ├── SKILL.md
-        ├── 00-README.md … 20-*.md, EK-GIS-POSTGIS.md, KURAL-HARITASI.md, BASLANGIC.md
+        ├── 00-README.md … 20-*.md, APPENDIX-GIS-POSTGIS.md, RULE-MAP.md, START.md
         ├── adr/
-        ├── arac/                    standart-kontrol.sh, golangci.yml
-        └── sablon/                  agent instruction files
+        ├── tools/                   check-standards.sh, check-secrets.sh, run-collection.sh,
+        │                            load-test.sh, version-advice.sh, check-refs.mjs,
+        │                            check-language.mjs, golangci.yml
+        └── templates/               agent instruction files
 ```
 
 ## Validate before publishing
