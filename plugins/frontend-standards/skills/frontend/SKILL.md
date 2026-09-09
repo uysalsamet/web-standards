@@ -61,7 +61,7 @@ task needs; the index below and `RULE-MAP.md` tell you which.
 | — | [RULE-MAP.md](RULE-MAP.md) | Signal → rule table; task → reading list; known gaps |
 | — | [START.md](START.md) | Wiring this standard into a repo (agent files, tools, CI) |
 | — | [adr/](adr/README.md) | "Why X and not Y?" Every stack decision with alternatives and costs |
-| — | [tools/](tools/README.md) | `check-standards.sh`, `check-i18n.mjs`: the machine-checkable part |
+| — | [tools/](tools/README.md) | Five checks: standards, i18n parity, bundle budget, nginx config, reference consistency |
 | — | [templates/](templates/) | Dockerfile, compose, nginx, runtime config, agent instruction files |
 
 ## How to work with this standard
@@ -80,11 +80,12 @@ task needs; the index below and `RULE-MAP.md` tell you which.
 ```bash
 bash <skill-dir>/tools/check-standards.sh .      # exit code must be 0
 node <skill-dir>/tools/check-i18n.mjs src/shared/i18n/locales   # exit code must be 0
+node <skill-dir>/tools/check-bundle-size.mjs dist budget.json   # after a build
 npm run lint && npm run typecheck && npm test && npm run build
 ```
 
 Then walk `15-NEW-FEATURE-CHECKLIST.md` item by item. Say explicitly which items were
-skipped and why. A clean tool run is not "compliant"; tools see roughly a tenth of the rules.
+skipped and why. A clean tool run is not "compliant"; tools see about 6 % of the rules.
 
 ## Never
 

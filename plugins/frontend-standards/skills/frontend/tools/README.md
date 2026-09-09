@@ -3,7 +3,7 @@
 > The **machine-checkable** part of the standard lives here. The aim is to take load off
 > the human (and the AI): a rule that can be caught mechanically is not left to code review.
 >
-> **These tools do not replace the standard.** They check roughly a tenth of the rules; the
+> **These tools do not replace the standard.** They check about 6 % of the rules; the
 > rest is left to the signal scan in [RULE-MAP.md](../RULE-MAP.md) §1 and the checklist in
 > [15-NEW-FEATURE-CHECKLIST.md](../15-NEW-FEATURE-CHECKLIST.md).
 
@@ -181,7 +181,7 @@ Both directions were measured on 2026-09-07.
 | **False positives on the compliant fixture** (`fixtures/compliant-app`) | **0 errors, 0 warnings** |
 | Exit codes | violating repo → `1`, fixture → `0` |
 
-`check-refs.mjs` on the standard itself: **56 documents, 806 rules, 23 prefixes,
+`check-refs.mjs` on the standard itself: **58 documents, 806 rules, 23 prefixes,
 0 errors, 0 warnings.**
 
 Five defects were found and fixed by running these tools rather than by reading them:
@@ -234,5 +234,5 @@ the tables above. **After adding a check, re-run both fixtures** (compliant → 
 still catches). An untested check produces false confidence.
 
 **[TOOL-04] MUST:** A clean audit does **not** mean the code follows the standard. The tools
-see roughly a tenth of the rules. The signal scan in [RULE-MAP.md](../RULE-MAP.md) §1 and
+see about 6 % of the rules. The signal scan in [RULE-MAP.md](../RULE-MAP.md) §1 and
 [15-NEW-FEATURE-CHECKLIST.md](../15-NEW-FEATURE-CHECKLIST.md) remain mandatory.

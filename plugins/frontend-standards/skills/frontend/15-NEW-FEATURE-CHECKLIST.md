@@ -8,7 +8,7 @@
 > it has a form, M when the page is publicly indexable, N when it consumes live data.
 > Section O is for a new application rather than a new feature.
 >
-> The automated part is `bash tools/check-standards.sh .`, which covers roughly a tenth of
+> The automated part is `bash tools/check-standards.sh .`, which covers about 6 % of
 > this list. The rest is you.
 
 ---

@@ -1,6 +1,6 @@
 # Rule Map
 
-> **What this file is for.** The standard has more than 800 rules across 23 documents.
+> **What this file is for.** The standard has more than 800 rules across 25 documents.
 > Nobody reads them all, and nobody should. This file is the index that turns "I am about
 > to write some code" into "these four rules apply to it".
 >

@@ -41,7 +41,7 @@
 | 20 | [20-INTEGRATION-AND-BULK-DATA.md](20-INTEGRATION-AND-BULK-DATA.md) | Imports, scheduled jobs, notifications, outbound webhooks, live streams |
 | APP | [APPENDIX-GIS-POSTGIS.md](APPENDIX-GIS-POSTGIS.md) | **Only** if there is map/geometry data |
 | 🧭 | [RULE-MAP.md](RULE-MAP.md) | **Every time, before writing code.** Looks at the code ahead of you and says which rules it triggers, plus known coverage gaps |
-| 🔧 | [tools/](tools/README.md) | Automated checks: `check-standards.sh` + `golangci.yml`. Runs in CI, hands 29 rules to the machine |
+| 🔧 | [tools/](tools/README.md) | Seven automated checks: standards, secrets, Postman collection, load test, version advice, reference and language consistency, plus `golangci.yml`. 35 rules handed to the machine |
 | ADR | [adr/](adr/README.md) | **Before arguing about a choice.** 18 decision records: what we chose and why, what the alternatives were, what would change the decision |
 
 ---
@@ -143,7 +143,7 @@ Do not read every file at once, it wastes context and irrelevant rules muddy the
 - **[GEN-00c] MUST:** Before declaring the work done, run `tools/check-standards.sh`,
   then go through `15-NEW-SERVICE-CHECKLIST.md` item by item and state clearly which
   item was skipped and why. **A clean automated check is not enough** — tooling covers
-  about 9% of the rules ([TOOL-04]).
+  about 6 % of the rules ([TOOL-04]).
 - **[GEN-00d] MUST:** If the standard conflicts with existing code, **the standard
   wins** — but do not touch the working existing code; write the new code to the
   standard and report the conflict. Even if you see services in the repo written with

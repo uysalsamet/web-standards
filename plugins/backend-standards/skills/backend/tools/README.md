@@ -4,7 +4,7 @@
 > burden on humans (and AI): a rule that can be caught mechanically is not left to
 > code review.
 >
-> **These tools do not replace the standard.** They check ~9% of the 584 rules; the
+> **These tools do not replace the standard.** They check about 6 % of the 594 rules; the
 > rest is left to human/AI via the [RULE-MAP.md](../RULE-MAP.md) §1 signal scan.
 
 ---

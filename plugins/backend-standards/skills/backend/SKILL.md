@@ -39,7 +39,7 @@ of limits. Whoever writes it, human or AI. All documents live next to this file.
 |---|---|---|
 | 🚀 | [START.md](START.md) | Wiring the standard into a repo: `templates/` agent files, opening prompt, task-specific openers |
 | 📁 | [templates/](templates/) | Copyable agent instruction files: `AGENTS.md` + Claude/Cursor/Copilot/Windsurf/Gemini pointers |
-| 🔧 | [tools/](tools/README.md) | Six audit tools: standards, secrets, collection, load test, version advisory, linter config |
+| 🔧 | [tools/](tools/README.md) | Seven checks: standards, secrets, Postman collection, load test, version advice, reference and language consistency, plus `golangci.yml` |
 | 🗺 | [RULE-MAP.md](RULE-MAP.md) | Signal → rule table; task → reading list; known gaps |
 | 01 | [01-GOLDEN-RULES.md](01-GOLDEN-RULES.md) | **Always** |
 | 02 | [02-TECH-VERSIONS.md](02-TECH-VERSIONS.md) | Starting a service, adding a dependency, `go.mod`/Dockerfile/compose |
@@ -97,7 +97,7 @@ is a human decision. `version-advice.sh` always exits 0 by design: a newer upstr
 information, not a violation.
 
 Then walk `15-NEW-SERVICE-CHECKLIST.md` item by item. Say explicitly which items were
-skipped and why. A clean tool run is not "compliant"; tools see roughly 9 % of the rules.
+skipped and why. A clean tool run is not "compliant"; tools see roughly 6 % of the rules.
 
 ## Never
 

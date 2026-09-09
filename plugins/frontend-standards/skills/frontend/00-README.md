@@ -23,7 +23,7 @@
 |---|---|---|
 | 🚀 | [START.md](START.md) | **First task in a repo.** Wiring the standard: agent files, tools, CI hooks, opening prompt |
 | 📁 | [templates/](templates/) | Copyable artefacts: Dockerfile, compose, nginx templates, runtime config, agent instruction files |
-| 🔧 | [tools/](tools/README.md) | `check-standards.sh`, `check-i18n.mjs`. The machine-checkable ~10 % |
+| 🔧 | [tools/](tools/README.md) | `check-standards.sh`, `check-i18n.mjs`, `check-bundle-size.mjs`, `nginx-smoke.sh`, `check-refs.mjs`. The machine-checkable ~6 % |
 | 🗺 | [RULE-MAP.md](RULE-MAP.md) | Signal → rule table. Task → reading list. Known gaps |
 | 01 | [01-GOLDEN-RULES.md](01-GOLDEN-RULES.md) | **Always.** Non-negotiable items |
 | 02 | [02-TECH-VERSIONS.md](02-TECH-VERSIONS.md) | Starting a project, adding a dependency, writing `package.json` / Dockerfile |
