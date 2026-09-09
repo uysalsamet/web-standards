@@ -352,5 +352,5 @@ if (( ERRORS > 0 )); then
   exit 1
 fi
 printf '%sCLEAN%s   0 errors, %d warning(s)\n' "$GRN" "$NC" "$WARNINGS"
-printf '%sReminder: tools cover ~10%% of the rules. RULE-MAP.md §1 and the checklist are still required.%s\n' "$DIM" "$NC"
+printf '%sReminder: tools cover about 6%% of the rules. RULE-MAP.md §1 and the checklist are still required.%s\n' "$DIM" "$NC"
 exit 0

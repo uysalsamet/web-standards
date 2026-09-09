@@ -218,7 +218,15 @@ function scanSources(srcDir) {
   return { used, dynamicPrefixes, fileCount }
 }
 
-function checkUsage(def, scan, report) {
+/** Does this locale define the key, one of its plural/context forms, or a subtree under it? */
+function localeHasKey(locale, used) {
+  for (const k of locale.keys.keys()) {
+    if (k === used || k.startsWith(`${used}_`) || k.startsWith(`${used}.`)) return true
+  }
+  return false
+}
+
+function checkUsage(def, locales, scan, report) {
   const all = [...def.keys.keys()]
   const covered = new Set()
   // A used key K covers K, K_<plural|context> and K.* (returnObjects). Dynamic prefixes cover everything below them.
@@ -231,9 +239,22 @@ function checkUsage(def, scan, report) {
     if (hit) covered.add(key)
   }
   for (const key of all) if (!covered.has(key)) report.warnings.push({ type: 'unusedKey', locale: def.lng, key })
+  // Every locale is checked, not only the default one. Reporting a key as "not in tr"
+  // when it is absent everywhere sends the reader to translate one file when the key was
+  // never added to any of them, which is a different job with a different fix.
   for (const u of scan.used) {
-    const present = all.some((k) => k === u || k.startsWith(`${u}_`) || k.startsWith(`${u}.`))
-    if (!present) report.errors.push({ type: 'usedKeyMissing', locale: def.lng, key: u, message: `used in code, not in ${def.lng}` })
+    const eksik = locales.filter((l) => !localeHasKey(l, u)).map((l) => l.lng)
+    if (eksik.length === 0) continue
+    const hepsi = eksik.length === locales.length
+    report.errors.push({
+      type: 'usedKeyMissing',
+      locale: hepsi ? '*' : eksik.join(','),
+      key: u,
+      missingIn: eksik,
+      message: hepsi
+        ? `used in code, defined in no locale (${eksik.join(', ')})`
+        : `used in code, missing from ${eksik.join(', ')}`,
+    })
   }
 }
 
@@ -310,7 +331,7 @@ function main() {
     } else {
       const scan = scanSources(srcDir)
       report.scan = { srcDir, fileCount: scan.fileCount, usedKeys: scan.used.size, dynamicPrefixes: scan.dynamicPrefixes.size, dynamicPrefixList: [...scan.dynamicPrefixes].sort() }
-      checkUsage(def, scan, report)
+      checkUsage(def, locales, scan, report)
     }
   }
   return finish(report, opts)

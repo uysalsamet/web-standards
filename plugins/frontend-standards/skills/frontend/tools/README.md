@@ -14,7 +14,7 @@
 | File | What it does |
 |---|---|
 | `check-standards.sh` | Cross-cutting rules: dependencies, secrets, source patterns, structure, Docker, compose, nginx, route/proxy collisions |
-| `check-i18n.mjs` | Locale key parity, placeholder parity, plural parity, empty values, unused keys |
+| `check-i18n.mjs` | Locale key parity, placeholder parity, plural parity, empty values, unused keys, and keys used in code but missing from one or more locales |
 | `check-bundle-size.mjs` | Bundle budgets against `budget.json` |
 | `nginx-smoke.sh` | Renders the nginx template with a dev env file and runs `nginx -t` in the image |
 | `check-refs.mjs` | Consistency of the standard itself: duplicate or undefined rule ids, numbering gaps, placeholder ids, broken links |
