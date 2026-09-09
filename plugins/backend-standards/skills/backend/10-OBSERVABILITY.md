@@ -76,7 +76,7 @@ log := pkg.Log.With("request_id", requestid.Get(c))
 log.Info("parking updated", "parking_id", id)
 ```
 
-**[OBS-05] MUST:** An incoming `X-Request-ID` header is **preserved** if present,
+**[OBS-05] MUST:** An incoming `X-Request-Id` header is **preserved** if present,
 otherwise generated, and returned in the response. Overwriting the upstream system's
 id makes it impossible to correlate the two systems' logs.
 

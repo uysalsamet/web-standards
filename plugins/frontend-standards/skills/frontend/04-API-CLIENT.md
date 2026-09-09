@@ -17,7 +17,7 @@ ever disagree with the backend standard, the backend standard wins and this file
 
 ```jsonc
 // Success. `meta` is present only on paginated list endpoints.
-{ "data": { /* resource or array */ }, "meta": { "page": 1, "limit": 20, "total": 143 } }
+{ "data": { /* resource or array */ }, "meta": { "page": 1, "limit": 20, "total_items": 143, "total_pages": 8 } }
 
 // Failure. Same body for every 4xx/5xx the backend produces itself.
 { "error": { "code": "PARKING_NOT_FOUND", "message": "Parking p-12 does not exist", "details": { /* optional */ } } }
@@ -489,7 +489,7 @@ client before the request is built; the clamp is `clampLimit`/`clampPage`, not i
 > a mistyped URL gives an empty table with no explanation. 100 is the backend standard's cap;
 > 20 keeps a first paint under one screen of rows. Lists above 200 rows virtualise ([PERF-12]).
 
-**[API-24] MUST:** Offset pagination (`page`, `limit`, `meta.total`) is used for admin tables
+**[API-24] MUST:** Offset pagination (`page`, `limit`, `meta.total_items`, `meta.total_pages`) is used for admin tables
 that show a total and jump to pages; cursor pagination is used for feeds, logs and anything
 that grows while the user reads; the mode is dictated per endpoint by the backend, and the
 client does not convert one into the other.
@@ -770,7 +770,7 @@ import { parkingFixtures } from './parkingFixtures'
 export const parkingHandlers = [
   http.get('/api/parkings', ({ request }) => {
     const limit = Number(new URL(request.url).searchParams.get('limit') ?? 20)
-    return HttpResponse.json({ data: parkingFixtures.slice(0, limit), meta: { page: 1, limit, total: parkingFixtures.length } })
+    return HttpResponse.json({ data: parkingFixtures.slice(0, limit), meta: { page: 1, limit, total_items: parkingFixtures.length } })
   }),
   http.get('/api/parkings/:id', ({ params }) => {
     const item = parkingFixtures.find((p) => p.id === params['id'])

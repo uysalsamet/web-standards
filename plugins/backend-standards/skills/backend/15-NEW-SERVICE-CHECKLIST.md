@@ -158,7 +158,7 @@
 
 - [ ] JSON logs via `log/slog`, to stdout; level set via env — [OBS-01], [OBS-02], [OBS-03]
 - [ ] Every log line has `service`, `version`, `request_id` — [OBS-04]
-- [ ] An incoming `X-Request-ID` is preserved — [OBS-05]
+- [ ] An incoming `X-Request-Id` is preserved — [OBS-05]
 - [ ] The log message is constant, variables are fields — [OBS-06]
 - [ ] `/metrics` exists and is not exposed externally; RED metrics are defined — [OBS-09], [OBS-10]
 - [ ] No UUID/email/IP in metric labels; `route` is templated — [OBS-11]

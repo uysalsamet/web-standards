@@ -301,7 +301,7 @@ export const parkingHandlers: HttpHandler[] = [
     const q = url.searchParams.get('q') ?? ''
     const items = [buildParking({ id: 'p-1', name: 'Merkez Otopark' }), buildParking({ id: 'p-2', name: 'Sahil Otopark' })]
       .filter((p) => p.name.toLocaleLowerCase('tr').includes(q.toLocaleLowerCase('tr')))
-    return HttpResponse.json({ data: items, meta: { page: 1, pageSize: 20, total: items.length } })
+    return HttpResponse.json({ data: items, meta: { page: 1, limit: 20, total_items: items.length, total_pages: 1 } })
   }),
 
   http.get('/api/parkings/:id', ({ params }) => {
@@ -381,7 +381,7 @@ describe('ParkingList', () => {
   })
 
   it('shows an empty state when the API returns no items', async () => {
-    server.use(http.get('/api/parkings', () => HttpResponse.json({ data: [], meta: { page: 1, pageSize: 20, total: 0 } })))
+    server.use(http.get('/api/parkings', () => HttpResponse.json({ data: [], meta: { page: 1, limit: 20, total_items: 0 } })))
     renderApp(<ParkingList />)
 
     expect(await screen.findByText('Kayıtlı otopark bulunamadı')).toBeInTheDocument()
@@ -394,7 +394,7 @@ describe('ParkingList', () => {
         calls += 1
         return calls === 1
           ? HttpResponse.json({ error: { code: 'INTERNAL', message: 'boom' } }, { status: 500 })
-          : HttpResponse.json({ data: [], meta: { page: 1, pageSize: 20, total: 0 } })
+          : HttpResponse.json({ data: [], meta: { page: 1, limit: 20, total_items: 0 } })
       }),
     )
     const { user } = renderApp(<ParkingList />)
