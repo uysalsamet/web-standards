@@ -46,6 +46,32 @@
 
 ---
 
+## Rule ID prefixes
+
+| Prefix | File | Prefix | File |
+|---|---|---|---|
+| API | 04 | ASYNC | 11 |
+| AUDIT | 16 | AUTH | 19 |
+| CACHE | 08 | CI | 14 |
+| CONC | 18 | DB | 07 |
+| ETL | 20 | FILE | 17 |
+| GEN | 00 | GIS | APPENDIX-GIS-POSTGIS |
+| HOOK | 20 | JOB | 20 |
+| KVKK | 16 | MAP | RULE-MAP |
+| MONEY | 16 | NOTIF | 20 |
+| OBS | 10 | OPS | 13 |
+| PERF | 09 | RES | 06 |
+| SEC | 05 | STR | 03 |
+| STREAM | 20 | TEST | 12 |
+| TIME | 18 | TR | 18 |
+| TOOL | tools/ | | |
+| VER | 02 |  |  |
+
+Severity words: **MUST** (binding), **MUST NOT** (forbidden), **SHOULD** (default;
+deviating requires a written reason in the PR).
+
+---
+
 ## Rule format
 
 Every rule is written like this and **its id never changes**:

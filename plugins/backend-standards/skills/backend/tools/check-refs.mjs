@@ -32,7 +32,9 @@ const asJson = args.includes('--json')
 const ROOT = resolve(args.find((a) => !a.startsWith('--')) ?? '.')
 
 // A rule definition is a line that opens with the id in bold, followed by its severity.
-const RULE_DEF = /^\*\*\[([A-Z][A-Z0-9]*)-(\d{2,3})\]\s*(MUST NOT|MUST|SHOULD NOT|SHOULD)/
+// A definition may be indented, bulleted or inside a blockquote: some documents put
+// their opening rule in a callout. Only the leading marker varies, never the shape.
+const RULE_DEF = /^[>\s-]*\*\*\[([A-Z][A-Z0-9]*)-(\d{2,3})\]\s*(MUST NOT|MUST|SHOULD NOT|SHOULD)/
 const RULE_REF = /\[([A-Z][A-Z0-9]*)-(\d{2,3})\]/g
 const PLACEHOLDER = /\[([A-Z][A-Z0-9]*)-(xx|XX|NN|nn)\]/
 const MD_LINK = /\[[^\]]*\]\(([^)\s#]+)(?:#[^)]*)?\)/g
@@ -162,7 +164,9 @@ for (const file of files) {
       const [, prefix, num] = m
       if (NOT_A_RULE.has(prefix)) continue
       const id = `${prefix}-${num}`
-      if (isDef && rawLine.startsWith(`**[${id}]`)) continue
+      // A rule does not count as referencing itself, whatever marker precedes it:
+      // strip any blockquote or bullet marker before comparing.
+      if (isDef && rawLine.replace(/^[>\s-]*/, '').startsWith(`**[${id}]`)) continue
       if (defs.has(id)) continue
       if (!unresolved.has(id)) unresolved.set(id, new Set())
       unresolved.get(id).add(`${rel}:${i + 1}`)
