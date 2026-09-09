@@ -6,7 +6,7 @@
 
 ---
 
-# 1. Bulk data import (ETL)
+## 1. Bulk data import (ETL)
 
 Moving municipal/institutional data from a file into the system. It is usually assumed to
 be a one-off, but in reality it runs many times, and every run risks corrupting the
@@ -97,7 +97,7 @@ requests/min), and **concurrent runs for the same source are blocked** (distribu
 
 ---
 
-# 2. Scheduled jobs (cron)
+## 2. Scheduled jobs (cron)
 
 **[JOB-01] MUST — In a multi-replica deployment, a job runs ONLY ONCE.**
 
@@ -150,7 +150,7 @@ all**.
 
 ---
 
-# 3. Notifications (email / SMS / push)
+## 3. Notifications (email / SMS / push)
 
 **[NOTIF-01] MUST — Sending is idempotent.** A retry does not send a second SMS:
 
@@ -202,7 +202,7 @@ subject to regulation.
 
 ---
 
-# 4. Outgoing webhooks
+## 4. Outgoing webhooks
 
 **[HOOK-01] MUST — Every request is signed** (HMAC-SHA256), and the signature **includes
 a timestamp**:
@@ -239,7 +239,7 @@ authorization ([KVKK-12]).
 
 ---
 
-# 5. Live streaming (WebSocket / SSE)
+## 5. Live streaming (WebSocket / SSE)
 
 **[STREAM-01] SHOULD — For a one-way stream, prefer SSE**, not WebSocket.
 > SSE is plain HTTP: it passes through the gateway, the authorization mechanism is the

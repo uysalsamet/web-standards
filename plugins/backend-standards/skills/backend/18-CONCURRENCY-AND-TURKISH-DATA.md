@@ -6,9 +6,9 @@
 
 ---
 
-# 1. Concurrent editing (lost update)
+## 1. Concurrent editing (lost update)
 
-## 1.1 The problem
+### 1.1 The problem
 
 ```
 10:00  Ayşe opens the parking record    → capacity: 100, floors: 3
@@ -26,7 +26,7 @@ silently disappeared, and no one will notice.
 > solve it: if both edit the same field, the last writer still wins and the first is
 > never warned.
 
-## 1.2 Solution — optimistic locking
+### 1.2 Solution — optimistic locking
 
 **[CONC-01] MUST:** Any table that multiple users can edit concurrently has a
 **version column**:
@@ -103,7 +103,7 @@ simpler and less easily misunderstood.
 server increments it ([API-08]). No client-supplied `version = $n` assignment; it is
 only ever compared inside `WHERE`.
 
-## 1.3 When to use pessimistic locking
+### 1.3 When to use pessimistic locking
 
 **[CONC-07] MUST:** Where **absolute correctness** is required, such as money
 movements and stock, use `SELECT ... FOR UPDATE` ([CACHE-22]):
@@ -121,7 +121,7 @@ COMMIT;
 (e.g. `ORDER BY id`) — otherwise two operations can wait on each other and deadlock
 ([DB-25]).
 
-## 1.4 Counters and accumulated values
+### 1.4 Counters and accumulated values
 
 **[CONC-09] MUST NOT — the read-modify-write pattern:**
 
@@ -144,7 +144,7 @@ RETURNING occupied_capacity;
 `Idempotency-Key` ([API-25]) — concurrency protection does not replace duplicate
 protection.
 
-## 1.5 Testing
+### 1.5 Testing
 
 **[CONC-11] MUST:** Write an optimistic locking test:
 ```
@@ -156,9 +156,9 @@ protection.
 
 ---
 
-# 2. Turkish text
+## 2. Turkish text
 
-## 2.1 The problem: `i` and `İ`
+### 2.1 The problem: `i` and `İ`
 
 Turkish is one of the few languages that does **not** follow Unicode's default
 case-conversion rules:
@@ -182,7 +182,7 @@ locale and the **operating system**. Development (Windows) and production (Linux
 Alpine) can produce different results. For this reason, OS locale is **never**
 trusted.
 
-## 2.2 The fix
+### 2.2 The fix
 
 **[TR-02] MUST:** Case conversion of Turkish text is done **explicitly with ICU
 collation**:
@@ -250,7 +250,7 @@ normalized := trLower.String(input)
 writing it separately in two places will eventually drift apart, and the search will
 silently stop finding records.
 
-## 2.3 Character encoding
+### 2.3 Character encoding
 
 **[TR-07] MUST:** The database and the connection encoding are **UTF-8**.
 `WIN1254`/`ISO-8859-9` (Latin-5) is not used.
@@ -281,7 +281,7 @@ be rejected by mistake.
 
 ---
 
-# 3. Time
+## 3. Time
 
 **[TIME-01] MUST:** All timestamps are `TIMESTAMPTZ` ([DB-06]), and the application
 works in **UTC** internally. Conversion to local time happens only at **display**

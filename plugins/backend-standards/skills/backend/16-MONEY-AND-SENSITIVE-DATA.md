@@ -12,9 +12,9 @@
 
 ---
 
-# 1. Money and decimal numbers
+## 1. Money and decimal numbers
 
-## 1.1 Basic rule
+### 1.1 Basic rule
 
 **[MONEY-01] MUST NOT — Store, move or calculate money with `float32`/`float64`.**
 
@@ -52,7 +52,7 @@ CONSTRAINT debts_paid_valid CHECK (paid_amount >= 0 AND paid_amount <= debt_amou
 is needed, increase the scale, **not the number of decimal places** — the number of cent
 digits is a business rule, not a technical detail.
 
-## 1.2 The Go side — the `Money` type
+### 1.2 The Go side — the `Money` type
 
 **[MONEY-03] MUST — In Go, money is stored as `int64` cents**, in its own type:
 
@@ -148,7 +148,7 @@ SELECT id, name, debt_amount::text, paid_amount::text FROM stall_debts WHERE id 
 > reading through text makes the conversion **single and predictable**. A driver upgrade
 > cannot silently change the behaviour.
 
-## 1.3 Arithmetic and rounding
+### 1.3 Arithmetic and rounding
 
 **[MONEY-07] MUST:** Addition and subtraction are done on `Money` (integers) — the
 result is exact.
@@ -246,7 +246,7 @@ func Parse(s string) (Money, error) {
 **[MONEY-10] MUST:** Rounding is done **once, at the very end**. Rounding intermediate
 results and then summing them accumulates error.
 
-## 1.4 Currency and integrity
+### 1.4 Currency and integrity
 
 **[MONEY-11] MUST:** Even if only one currency is used, this is stated **explicitly** —
 either as a schema comment or a `currency CHAR(3) NOT NULL DEFAULT 'TRY'` column:
@@ -269,7 +269,7 @@ entry (§3).
 **[MONEY-14] MUST:** Derivable values such as balances are either `GENERATED` ([DB-09])
 or computed from movements — never kept separately in two places and synced by hand.
 
-## 1.5 When to use `shopspring/decimal`
+### 1.5 When to use `shopspring/decimal`
 
 **[MONEY-15] SHOULD:** Integer cents are **sufficient**, with zero dependencies, for
 addition/subtraction and simple ratios. If genuine decimal math is needed (compound
@@ -281,7 +281,7 @@ be considered — however:
   12 months old." The library may be mature and stable ("finished"), but this is
   **an exception that must be explicitly justified.**
 
-## 1.6 Migrating existing `float` columns
+### 1.6 Migrating existing `float` columns
 
 **[MONEY-16] MUST:** If money columns are currently stored as
 `REAL`/`DOUBLE PRECISION`, the migration is done in forward-compatible steps ([DB-13]):
@@ -300,13 +300,13 @@ UPDATE stall_debts SET debt_amount_num = ROUND(debt_amount::numeric, 2);
 
 ---
 
-# 2. Personal data and KVKK
+## 2. Personal data and KVKK
 
 > Under KVKK (Turkey's personal data protection law), Law No. 6698, the institution is
 > the **data controller**. The rules below are what is technically needed to fulfil that
 > responsibility.
 
-## 2.1 Inventory and minimisation
+### 2.1 Inventory and minimisation
 
 **[KVKK-01] MUST:** It is **documented** which table holds which personal data. It is
 labelled in the schema:
@@ -336,7 +336,7 @@ without this."
 data, and deletion/anonymisation runs **automatically** once it expires. No manual
 cleanup.
 
-## 2.2 Deletion and anonymisation
+### 2.2 Deletion and anonymisation
 
 **[KVKK-04] MUST:** A data subject's deletion request must be **technically
 enforceable**. What "deletion" means is decided in advance:
@@ -355,7 +355,7 @@ there.
 from reappearing after a restore: the backup retention period must be defined, and
 re-applying the deletion list after a restore must be written into the **procedure**.
 
-## 2.3 Access, encryption, breaches
+### 2.3 Access, encryption, breaches
 
 **[KVKK-07] MUST — Special category data** (health, biometric, religion, criminal
 conviction, union membership, etc.) is protected more strictly: separate permissions
@@ -397,9 +397,9 @@ added to a service can create a data transfer without anyone realising it.
 
 ---
 
-# 3. Audit trail (audit log)
+## 3. Audit trail (audit log)
 
-## 3.1 Difference from application logs
+### 3.1 Difference from application logs
 
 | | Application log ([10](10-OBSERVABILITY.md)) | Audit trail |
 |---|---|---|
@@ -412,7 +412,7 @@ added to a service can create a data transfer without anyone realising it.
 **[AUDIT-07] MUST:** The two are never conflated. The audit trail is not written to
 stdout via `slog` — it lives somewhere persistent, queryable and immutable.
 
-## 3.2 What is recorded
+### 3.2 What is recorded
 
 **[AUDIT-01] MUST — Operations that must produce an audit trail entry:**
 - **Money movements** — creating/deleting a debt, collecting payment, amount changes ([MONEY-13])
