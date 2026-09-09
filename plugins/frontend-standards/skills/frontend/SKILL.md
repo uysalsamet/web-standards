@@ -13,6 +13,12 @@ strategy.
 All documents live next to this file. **Do not read all of them at once.** Read what the
 task needs; the index below and `RULE-MAP.md` tell you which.
 
+> **Language:** the rules are written in English so the set can be shared and reviewed by
+> anyone. That is the source language, not the working language. **Answer the user in the
+> language they write to you in**, and translate a rule when you quote it to them. What must
+> not be translated is the rule itself: `MUST` stays a binding obligation and `SHOULD` stays
+> a default, whatever language the conversation is in.
+
 ## Always read first
 
 1. [01-GOLDEN-RULES.md](01-GOLDEN-RULES.md) — 24 non-negotiable rules. Every task.

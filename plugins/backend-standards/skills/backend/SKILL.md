@@ -11,6 +11,12 @@ description: Binding backend engineering standard for Go + Gin microservices beh
 > documents themselves are in English; where a rule exists because the data is
 > Turkish, the reason is explained rather than assumed.
 
+> **Language:** the rules are written in English so the set can be shared and reviewed by
+> anyone. That is the source language, not the working language. **Answer the user in the
+> language they write to you in**, and translate a rule when you quote it to them. What must
+> not be translated is the rule itself: `MUST` stays a binding obligation and `SHOULD` stays
+> a default, whatever language the conversation is in.
+
 This skill is a **contract, not a suggestion**: one stack (Go 1.25 + Gin v1.12 + pgx/v5 +
 Valkey + goose + `log/slog` + Prometheus/OTel), one folder layout, one error body, one set
 of limits. Whoever writes it, human or AI. All documents live next to this file.
