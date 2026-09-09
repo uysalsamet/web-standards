@@ -1,0 +1,6 @@
+This project's AI instructions live in AGENTS.md. Read it and follow it exactly.
+
+The standard under backend-standards/ is binding. Go 1.25.12 + Gin v1.12 + pgx/v5.
+Before writing code: 01-GOLDEN-RULES.md and the RULE-MAP.md §1 signal scan.
+Before finishing: tools/check-standards.sh (exit 0) and 15-NEW-SERVICE-CHECKLIST.md.
+Only read-only commands in git.

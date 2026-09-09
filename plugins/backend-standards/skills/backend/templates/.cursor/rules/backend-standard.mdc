@@ -1,0 +1,17 @@
+---
+description: Backend development standard, binding on this project
+alwaysApply: true
+---
+
+This project's AI instructions live in `AGENTS.md`. Read it and follow it exactly.
+
+Short summary:
+- The standard under `backend-standards/` is BINDING.
+- Stack: Go 1.25.12 · Gin v1.12.0 · pgx/v5 · Valkey · goose · log/slog. Not to be changed.
+- BEFORE writing code: `backend-standards/01-GOLDEN-RULES.md` and
+  `backend-standards/RULE-MAP.md` §1 signal scan.
+- Version/dependencies: `backend-standards/02-TECH-VERSIONS.md`. Do not add a package
+  that isn't in the table, ask the user.
+- BEFORE finishing: `bash backend-standards/tools/check-standards.sh .` (exit 0) and
+  `backend-standards/15-NEW-SERVICE-CHECKLIST.md`.
+- Only read-only commands in git; commit/push belong to the user.

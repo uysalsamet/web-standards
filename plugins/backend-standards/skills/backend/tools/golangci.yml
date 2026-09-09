@@ -1,0 +1,97 @@
+# =============================================================================
+#  .golangci.yml — backend-standards
+#  Copied into a service root as `.golangci.yml`.
+#
+#  This file delegates the standard's Go-specific rules TO THE LINTER.
+#  For the rules outside the language (SQL, Dockerfile, compose, route permissions):
+#     ./tools/check-standards.sh
+# =============================================================================
+version: "2"
+
+linters:
+  enable:
+    # --- correctness ---
+    - errcheck        # [GEN-19] ignoring a returned error
+    - govet
+    - staticcheck
+    - ineffassign
+    - unused
+    - errorlint       # [API-22] == comparison instead of errors.Is/As
+    - bodyclose       # HTTP response body left open -> connection leak
+    - rowserrcheck    # [PERF-16] rows.Err() unchecked -> silently missing rows
+    - sqlclosecheck   # [PERF-16] rows/stmt left open -> pool exhaustion
+    - noctx           # [GEN-17] HTTP request without a context
+    - contextcheck    # [GEN-17] context not propagated
+    # --- security ---
+    - gosec           # [SEC-*] common security mistakes
+    # --- specific to this standard ---
+    - forbidigo       # the patterns below
+    - depguard        # forbidden dependencies [VER-05]
+    - misspell
+
+  settings:
+    forbidigo:
+      # analyze-types: also match inside strings and selector expressions
+      analyze-types: true
+      forbid:
+        - pattern: '^fmt\.Print(ln|f)?$'
+          msg: '[OBS-01] Use structured logging: log/slog. fmt.Print* is forbidden.'
+        - pattern: '^log\.(Print|Printf|Println|Fatal|Fatalf|Panic)$'
+          msg: '[OBS-01] Use log/slog instead of the standard log package.'
+        - pattern: '^gin\.Default$'
+          msg: '[STR-13] Use gin.New(); Default adds its own logger and you get duplicate logs.'
+        - pattern: '\.BindJSON$|\.MustBindWith$'
+          msg: '[API-12] Use ShouldBindJSON; Bind* writes its own 400 and overwrites our error body.'
+        - pattern: '^strings\.(ToLower|ToUpper|EqualFold)$'
+          msg: '[TR-05] Use cases.Lower(language.Turkish) on Turkish text; otherwise justify with //nolint.'
+        - pattern: '^md5\.|^sha1\.'
+          msg: '[AUTH-05] Use argon2id for passwords; md5 and sha1 are forbidden.'
+        - pattern: '^rand\.(Int|Intn|Read)$'
+          msg: '[AUTH-01] Use crypto/rand to generate secrets and tokens, never math/rand.'
+
+    depguard:
+      rules:
+        main:
+          deny:
+            - pkg: github.com/gofiber/fiber
+              desc: '[VER-05] Gin is the chosen framework; see adr/0001-http-framework.md'
+            - pkg: github.com/labstack/echo
+              desc: '[VER-05] Gin is the chosen framework; see adr/0001-http-framework.md'
+            - pkg: github.com/lib/pq
+              desc: '[VER-05] pgx/v5 is the chosen driver; see adr/0003-postgres-driver.md'
+            - pkg: gorm.io/gorm
+              desc: '[VER-06] ORMs are not used; see adr/0003-postgres-driver.md'
+            - pkg: entgo.io/ent
+              desc: '[VER-06] ORMs are not used; see adr/0003-postgres-driver.md'
+            - pkg: github.com/spf13/viper
+              desc: '[VER-08] Configuration is read with os.LookupEnv; see adr/0006-configuration.md'
+            - pkg: github.com/knadh/koanf
+              desc: '[VER-08] Configuration is read with os.LookupEnv; see adr/0006-configuration.md'
+            - pkg: go.uber.org/zap
+              desc: '[VER-05] log/slog is the chosen logger; see adr/0005-logging.md'
+            - pkg: github.com/rs/zerolog
+              desc: '[VER-05] log/slog is the chosen logger; see adr/0005-logging.md'
+            - pkg: github.com/sirupsen/logrus
+              desc: '[VER-05] log/slog is the chosen logger; see adr/0005-logging.md'
+            - pkg: github.com/stretchr/testify
+              desc: '[VER-05] The stdlib testing package is used; see adr/0011-testing-approach.md'
+            - pkg: github.com/gofrs/uuid
+              desc: '[VER-05] google/uuid is the approved UUID package.'
+
+    gosec:
+      excludes:
+        - G104   # overlaps with errcheck
+
+  exclusions:
+    rules:
+      # These checks are noise in tests; excluded.
+      - path: _test\.go
+        linters: [errcheck, gosec, forbidigo, noctx]
+      # os.Exit and a startup log are legitimate in main.go.
+      - path: cmd/main\.go
+        linters: [forbidigo]
+        text: 'log/slog'
+
+formatters:
+  enable:
+    - gofmt

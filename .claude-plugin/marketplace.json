@@ -21,8 +21,8 @@
     {
       "name": "backend-standards",
       "source": "./plugins/backend-standards",
-      "description": "Backend engineering standard (Turkish): Go + Gin microservices behind a gateway. Clean architecture, API contract, security, resilience, PostgreSQL/PostGIS, cache, observability, Docker, CI. 594 rules in 25 documents, 18 decision records, 5 audit tools (standards, secrets, Postman collection, load test, version advisory).",
-      "version": "1.1.0",
+      "description": "Backend engineering standard: Go + Gin microservices behind a gateway. Clean architecture, API contract, security, resilience, PostgreSQL/PostGIS, cache, observability, Docker, CI. 594 rules in 25 documents, 18 decision records, 5 audit tools (standards, secrets, Postman collection, load test, version advisory).",
+      "version": "2.0.0",
       "category": "engineering-standards",
       "keywords": ["go", "gin", "microservices", "postgres", "postgis", "standards"],
       "license": "MIT"
